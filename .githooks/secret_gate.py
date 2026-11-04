@@ -1,7 +1,9 @@
 """Pre-commit secret gate (installed by repo-kickoff). Scans staged content."""
 import re, subprocess, sys
-NAME = re.compile(r"(^|/)(\.env(\..+)?|.*secret.*|.*credential.*|.*\.pem|.*\.key|id_rsa.*)$", re.I)
-SAFE_NAME = re.compile(r"\.example$|\.sample$|\.template$|secret_gate\.py$", re.I)
+NAME = re.compile(r"(^|/)(\.env(\..+)?|[^/]*secrets?(\.[^/]*)?\.(json|ya?ml|toml|ini|cfg|txt|env|bat|ps1|sh)"
+                  r"|client_secret[^/]*\.json|\.?credentials?(\.[^/]*)?\.(json|ya?ml|toml|ini)|[^/]*\.(pem|key|p12|pfx)"
+                  r"|id_rsa[^/]*|\.netrc|\.npmrc|\.pypirc)$", re.I)
+SAFE_NAME = re.compile(r"\.example$|\.sample$|\.template$|(^|/)\.githooks/secret_gate\.py$", re.I)  # only the gate itself
 TEXT = re.compile(
     r"(ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-(ant-)?[A-Za-z0-9_-]{24,}"
     r"|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----"
