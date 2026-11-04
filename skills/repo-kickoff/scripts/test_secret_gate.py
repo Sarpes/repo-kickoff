@@ -49,13 +49,26 @@ with tempfile.TemporaryDirectory() as d:
     fails += not good
     print(f"  {'PASS' if good else 'FAIL'}  .gitattributes keeps hooks LF")
 # The gate (installed into repos) and audit_repo.py must look for the same things.
-import re  # noqa: E402
-src_gate = INSTALL.read_text(encoding="utf-8")
-src_audit = INSTALL.with_name("audit_repo.py").read_text(encoding="utf-8")
-grab = lambda src, var: re.search(r"^" + var + r" = re\.compile\((.*?), re\.I\)", src, re.S | re.M).group(1)
-strings = lambda s: re.findall(r'r"([^"]*)"', s)
-same = strings(grab(src_gate, "NAME")) == strings(grab(src_audit, "SECRET_NAME")) and \
-    strings(grab(src_gate, "TEXT")) == strings(grab(src_audit, "SECRET_TEXT"))
+# Compare the COMPILED patterns: the gate's are built by running the pattern lines of
+# the gate source that install_secret_gate.py writes; audit_repo's by importing it.
+import importlib.util  # noqa: E402
+
+
+def load(path, name):
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec and spec.loader, f"cannot load {path}"
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+installer = load(INSTALL, "installer_under_test")
+audit = load(INSTALL.with_name("audit_repo.py"), "audit_under_test")
+gate_defs = installer.GATE.split("\ngit = lambda", 1)[0]     # imports + NAME / SAFE_NAME / TEXT only
+gate = {}
+exec(gate_defs, gate)
+same = (gate["NAME"].pattern, gate["NAME"].flags) == (audit.SECRET_NAME.pattern, audit.SECRET_NAME.flags) and \
+    (gate["TEXT"].pattern, gate["TEXT"].flags) == (audit.SECRET_TEXT.pattern, audit.SECRET_TEXT.flags)
 fails += not same
 print(f"  {'PASS' if same else 'FAIL'}  gate and audit_repo.py use identical secret patterns")
 print("ALL PASS" if not fails else f"{fails} FAILED")
