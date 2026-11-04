@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4 · 2026-11-04
+- The pre-commit hook names each Python candidate (`python3`, `python`, `py`) on its own line instead of looping over a variable, so every command it can run is readable in the file. Behaviour is unchanged: the first candidate that prints the marker runs the gate; if none does, the commit is refused.
+- `plugin.json` sets `icon`, so the directory listing uses the plugin's icon.
+- Icon (512 × 512) and README logo (688 × 384) re-encoded smaller.
+- The guide's example of an allowed reference uses a neutral name; this repo's `.gitignore` drops the web links from the template's comments.
+
 ## 0.1.3 · 2026-11-04
 - Directory listing links in `plugin.json`: homepage, repository, documentation (`docs/GUIDE.md`), support (issues), privacy policy (`PRIVACY.md`, new), terms (`LICENSE`).
 - The secret gate's self-test uses a neutral variable name (`$EXAMPLE_TOKEN`) as its example of an allowed reference, instead of the name of a real credential that the plugin never reads.
