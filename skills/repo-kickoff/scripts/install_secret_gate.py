@@ -94,7 +94,7 @@ def self_test() -> bool:
         subprocess.run(["git", "init", "-q", str(t)], check=True)
         install(t)
         refused = not commit(t, "config.py", f'TOKEN = "{fake}"\n')
-        accepted = commit(t, "app.py", 'TOKEN = "$GITHUB_TOKEN"\nprint("ok")\n')
+        accepted = commit(t, "app.py", 'TOKEN = "$EXAMPLE_TOKEN"\nprint("ok")\n')
     print(f"self-test: fake token refused={refused}, clean file accepted={accepted}")
     return refused and accepted
 

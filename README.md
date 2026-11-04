@@ -41,7 +41,7 @@ Everything below happens on your machine, with your own tools and credentials, a
 | **Sends** | Only in kickoff step 8, and only when you go ahead: `gh repo create` makes a **private** repository under the owner you choose, and `git push` uploads your project to it, with your own credentials. Audit mode sends nothing. | GitHub |
 | **Installs** | Into the new repository only: `.githooks/pre-commit` and `.githooks/secret_gate.py`, `git config core.hooksPath .githooks`, and one `.gitattributes` line. The gate runs locally on each commit and reads only the staged files. | the repository |
 
-No telemetry, no other services, nothing stored outside the repository you work on.
+No telemetry, no other services, nothing stored outside the repository you work on. Privacy policy: [PRIVACY.md](PRIVACY.md).
 
 ## Install
 

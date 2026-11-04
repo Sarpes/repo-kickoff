@@ -1,11 +1,17 @@
 {
   "name": "repo-kickoff",
-  "description": "Start a new repository whose setup can be reproduced and checked (pinned dependencies, Python version, a proven secret gate, main before branches), and audit an existing repo's README, requirements and .gitignore against its code.",
-  "version": "0.1.2",
+  "description": "Start a new repository, locally and as a private GitHub repo, whose setup can be reproduced and checked (pinned dependencies, Python version, a tested pre-commit gate that blocks common API keys and passwords, main before branches), and audit an existing repo: README and requirements against its code, .gitignore, and secrets already committed.",
+  "version": "0.1.3",
   "author": {
     "name": "Sarp Esenyel"
   },
+  "homepage": "https://github.com/Sarpes/repo-kickoff",
+  "repository": "https://github.com/Sarpes/repo-kickoff",
   "license": "MIT",
-  "keywords": ["repository", "setup", "readme", "requirements", "gitignore", "secrets", "audit", "python"],
-  "skills": ["./skills/repo-kickoff"]
+  "keywords": ["repository", "github", "git", "setup", "readme", "requirements", "gitignore", "secrets", "api-keys", "audit", "python"],
+  "skills": ["./skills/repo-kickoff"],
+  "documentationUrl": "https://github.com/Sarpes/repo-kickoff/blob/main/docs/GUIDE.md",
+  "supportUrl": "https://github.com/Sarpes/repo-kickoff/issues",
+  "privacyPolicyUrl": "https://github.com/Sarpes/repo-kickoff/blob/main/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/Sarpes/repo-kickoff/blob/main/LICENSE"
 }

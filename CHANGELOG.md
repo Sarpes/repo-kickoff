@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3 · 2026-11-04
+- Directory listing links in `plugin.json`: homepage, repository, documentation (`docs/GUIDE.md`), support (issues), privacy policy (`PRIVACY.md`, new), terms (`LICENSE`).
+- The secret gate's self-test uses a neutral variable name (`$EXAMPLE_TOKEN`) as its example of an allowed reference, instead of the name of a real credential that the plugin never reads.
+- Description and keywords name what the listing left implicit: the private GitHub repository and the gate that blocks API keys and passwords (keywords `github`, `git`, `api-keys`).
+
 ## 0.1.2 · 2026-11-04
 - `audit_repo.py` reads every `requirements*.txt` in the repo, so a second environment (for example a Docker worker's `worker/requirements.txt`) is recognised.
 - Import names map to package names even when the package is not installed (`docx` → `python-docx`, `fpdf` → `fpdf2`, `webview` → `pywebview`), and namespace packages map by module (`google.oauth2` → `google-auth`, not `protobuf`). `pin_requirements.py` now uses the same mapping.
