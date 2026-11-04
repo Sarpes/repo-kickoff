@@ -33,7 +33,20 @@ SAFE_NAME = re.compile(r"\.example$|\.sample$|\.template$|(^|/)\.githooks/secret
 BIG = 5 * 1024 * 1024
 # import name -> distribution name where they differ and the package may not be installed here
 KNOWN = {"sklearn": "scikit-learn", "cv2": "opencv-python", "PIL": "pillow", "yaml": "pyyaml",
-         "bs4": "beautifulsoup4", "dotenv": "python-dotenv", "psycopg2": "psycopg2-binary"}
+         "bs4": "beautifulsoup4", "dotenv": "python-dotenv", "psycopg2": "psycopg2-binary",
+         "docx": "python-docx", "fpdf": "fpdf2", "webview": "pywebview", "googleapiclient": "google-api-python-client"}
+# namespace packages: several distributions share one top-level name, so map by the longest module prefix
+NAMESPACE = {"google.oauth2": "google-auth", "google.auth": "google-auth", "google.protobuf": "protobuf",
+             "google.cloud.storage": "google-cloud-storage", "google.cloud.bigquery": "google-cloud-bigquery",
+             "google.generativeai": "google-generativeai", "google.genai": "google-genai"}
+
+
+def import_key(module):
+    """The name a requirement is checked under: the namespace distribution for google.*, else the top-level name."""
+    for prefix in sorted(NAMESPACE, key=len, reverse=True):
+        if module == prefix or module.startswith(prefix + "."):
+            return NAMESPACE[prefix]
+    return module.split(".")[0]
 
 
 def git(repo, *args):
@@ -73,21 +86,24 @@ def check_requirements(repo, files):
                 top = n.split(".")[0]
                 if top in sys.stdlib_module_names or top in local or top == "__future__":
                     continue
-                imports.setdefault(top, f"{f}:{node.lineno}")
+                imports.setdefault(import_key(n), f"{f}:{node.lineno}")
     dist_of = {k: v[0] for k, v in md.packages_distributions().items() if v}
-    wanted = {norm(KNOWN.get(t, dist_of.get(t, t))): (t, where) for t, where in imports.items()}
+    wanted = {norm(KNOWN.get(t, t if t in NAMESPACE.values() else dist_of.get(t, t))): (t, where)
+              for t, where in imports.items()}
 
-    # Dependencies may live in requirements*.txt (runtime + dev files) and/or pyproject.toml.
-    req_files = sorted(p for p in repo.glob("requirements*.txt"))
+    # Dependencies may live in requirements*.txt anywhere in the repo (runtime, dev, optional, or a
+    # second environment such as worker/requirements.txt for a container) and/or pyproject.toml.
+    req_files = sorted(repo / f for f in files if Path(f).name.startswith("requirements") and f.endswith(".txt"))
     listed = {}  # dist -> (where, version spec)
     for rf in req_files:
+        rel = rf.relative_to(repo).as_posix()
         for i, line in enumerate(rf.read_text(encoding="utf-8").splitlines(), 1):
             line = line.split("#")[0].strip()
             if not line or line.startswith("-"):
                 continue
             m = re.match(r"([A-Za-z0-9_.\-]+)(\[.*\])?\s*(.*)", line)
             if m:
-                listed.setdefault(norm(m.group(1)), (f"{rf.name}:{i}", m.group(3)))
+                listed.setdefault(norm(m.group(1)), (f"{rel}:{i}", m.group(3)))
     pyproject = repo / "pyproject.toml"
     if pyproject.exists():
         import tomllib

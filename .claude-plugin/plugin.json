@@ -1,7 +1,7 @@
 {
   "name": "repo-kickoff",
   "description": "Start a new repository whose setup can be reproduced and checked (pinned dependencies, Python version, a proven secret gate, main before branches), and audit an existing repo's README, requirements and .gitignore against its code.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": {
     "name": "Sarp Esenyel"
   },

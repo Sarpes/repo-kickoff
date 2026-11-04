@@ -78,7 +78,7 @@ Read-only. Exit code 1 if any **high** or **medium** finding exists, else 0.
 
 | Check | Finds |
 |---|---|
-| REQ | Third-party imports (parsed from the code, not guessed) missing from `requirements*.txt` / `pyproject.toml`; listed packages never imported; unpinned versions (info); no stated Python version |
+| REQ | Third-party imports (parsed from the code, not guessed) missing from every `requirements*.txt` in the repo (a container's `worker/requirements.txt` counts too) and `pyproject.toml`; listed packages never imported; unpinned versions (info); no stated Python version. Import names are mapped to package names even when the package is not installed (`docx` → `python-docx`, `google.oauth2` → `google-auth`). |
 | DOC | README references to files that are not in the repo; `file:LINE` references beyond the end of the file; all in-range references as `verify` items |
 | IGN | Files tracked although `.gitignore` ignores them; tracked files named like secrets (`.env`, `secrets.toml`, `*_secrets.bat`, `client_secret*.json`, `credentials.json`, `.pem`, `.key`, …); lines that look like secrets (GitHub/Anthropic/AWS keys, private keys, `password = "…"`); tracked files over 5 MB |
 
