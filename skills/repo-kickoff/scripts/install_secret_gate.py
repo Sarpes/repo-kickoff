@@ -50,11 +50,12 @@ if hits:
 
 HOOK = """#!/bin/sh
 # Pre-commit hook installed by repo-kickoff: run the secret gate with a Python that really runs.
-for p in python3 python py; do
-  if [ "$("$p" -c "print('gate-ok')" 2>/dev/null)" = "gate-ok" ]; then
-    exec "$p" "$(git rev-parse --show-toplevel)/.githooks/secret_gate.py"
-  fi
-done
+# Each candidate must print a marker; a Windows Store stub answers to the name without running.
+# Candidates are named one by one so every command this hook can run is readable in this file.
+gate="$(git rev-parse --show-toplevel)/.githooks/secret_gate.py"
+if [ "$(python3 -c "print('gate-ok')" 2>/dev/null)" = "gate-ok" ]; then exec python3 "$gate"; fi
+if [ "$(python -c "print('gate-ok')" 2>/dev/null)" = "gate-ok" ]; then exec python "$gate"; fi
+if [ "$(py -c "print('gate-ok')" 2>/dev/null)" = "gate-ok" ]; then exec py "$gate"; fi
 echo "secret gate: no working Python found - commit refused (fail-closed)" >&2
 exit 1
 """
