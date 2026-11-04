@@ -13,7 +13,7 @@ It is written for Python projects; the git, `.gitignore`, secret-gate and README
 
 ## 1. Why it exists
 
-Measured in fresh Claude Code sessions (details: [decision 0003](decisions/0003-measured-before-and-after.md)), agents without the skill wrote good code but skipped the parts that make a repository reproducible and safe:
+Measured in fresh Claude Code sessions (three runs per arm for kickoff, two for audit), agents without the skill wrote good code but skipped the parts that make a repository reproducible and safe:
 
 | Criterion | Without the skill | With it |
 |---|---|---|
@@ -171,5 +171,5 @@ Copy the folder `skills/repo-kickoff/` from this repository to `~/.claude/skills
 
 - **Versions:** bump `version` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` with every change users should receive, and add a line to `CHANGELOG.md`. Without a bump, `claude plugin update` keeps users on the old copy.
 - **Checks before a release:** both test files print ALL PASS; `claude plugin validate .` passes; `python skills/repo-kickoff/scripts/audit_repo.py .` reports 0 high and 0 medium.
-- **Changing `SKILL.md`:** re-run the before/after scenarios described in decision 0003; the skill is kept only for behaviour it measurably changes.
+- **Changing `SKILL.md`:** re-run the before/after scenarios (fresh sessions with and without the skill, scored on the criteria in §1); the skill is kept only for behaviour it measurably changes.
 - **Secret patterns** live in two places (`install_secret_gate.py`, `audit_repo.py`); the test fails if they differ.
