@@ -104,7 +104,7 @@ Commit `.githooks/` and `.gitattributes`. After cloning the repo anywhere else, 
 ## 6. The secret gate in daily use
 
 - **What it blocks:** a commit whose staged files are named like secret files or contain lines that look like credentials. The value itself is never printed.
-- **What it allows:** references such as `os.environ["DB_PASSWORD"]`, `"$TOKEN"`, `%TOKEN%`; files ending in `.example`, `.sample`, `.template`.
+- **What it allows:** references to a value kept elsewhere, such as `os.environ["MY_SETTING"]`, `"$MY_SETTING"`, `%MY_SETTING%`; files ending in `.example`, `.sample`, `.template`.
 - **A deliberate exception** (for example a fake value in a test): end that line with `secret-gate: allow`.
 - **Python on Windows:** the hook does not trust the `python3` command, because the Windows Store placeholder answers to it without running anything. It asks each candidate (`python3`, `python`, `py`) to print a marker and uses the first that does. If none works, the commit is refused rather than let through.
 - **Do not bypass it** with `git commit --no-verify`: fix the finding, or mark a genuine false positive as above.
