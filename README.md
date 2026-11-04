@@ -27,6 +27,21 @@ In audit mode, one of two sessions without the skill sampled the README's 29 `fi
 
 - Python **3.11+** (the scripts use `tomllib`); tested on 3.13.9. Standard library only, nothing to `pip install`.
 - git. GitHub CLI `gh` for the GitHub step and for fetching `.gitignore` templates (optional).
+- Built for Claude Code: the steps need a local git repository and Python. On claude.ai or in Cowork, without a local repository, the skill can only explain the steps.
+
+## What it runs, fetches and sends
+
+Everything below happens on your machine, with your own tools and credentials, and only when you ask for a kickoff or an audit.
+
+| | What | Where |
+|---|---|---|
+| **Runs** | `git` (init, commit, branch, push) and the Python scripts in `skills/repo-kickoff/scripts/`. The scripts use only Python's standard library, call no program but `git`, and contain no network code. | your machine |
+| **Reads** | The files of the repository you point it at, and (for `pin_requirements.py`) the installed-package list of the Python you run it with. It does not read your environment variables or credential files; it looks for credential-shaped file names and lines only to warn about them, and prints file names and line numbers, never values. | your machine |
+| **Fetches** | GitHub's official `.gitignore` template, through `gh api /gitignore/templates/<Language>` with your own `gh` login (kickoff step 2). | GitHub |
+| **Sends** | Only in kickoff step 8, and only when you go ahead: `gh repo create` makes a **private** repository under the owner you choose, and `git push` uploads your project to it, with your own credentials. Audit mode sends nothing. | GitHub |
+| **Installs** | Into the new repository only: `.githooks/pre-commit` and `.githooks/secret_gate.py`, `git config core.hooksPath .githooks`, and one `.gitattributes` line. The gate runs locally on each commit and reads only the staged files. | the repository |
+
+No telemetry, no other services, nothing stored outside the repository you work on.
 
 ## Install
 
