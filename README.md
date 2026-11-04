@@ -17,7 +17,9 @@ Measured on a small Python project ("kur-takip": TCMB daily exchange rates → S
 | `main` exists before the first branch | 2/3 | 3/3 |
 | Audit findings (high + medium) | 1 per repo | 0 |
 
-In audit mode, one of two sessions without the skill sampled the README's 29 `file:line` references and missed the one stale reference; with the skill, both checked all 29 and caught it. Method and numbers: [docs/decisions/0003-measured-before-and-after.md](docs/decisions/0003-measured-before-and-after.md).
+In audit mode, one of two sessions without the skill sampled the README's 29 `file:line` references and missed the one stale reference; with the skill, both checked all 29 and caught it. Details: [docs/GUIDE.md](docs/GUIDE.md).
+
+**Full documentation:** [docs/GUIDE.md](docs/GUIDE.md): how each step works, the scripts, the secret gate, installing on other computers, troubleshooting.
 
 ## Requirements
 
@@ -62,8 +64,8 @@ Both build throwaway repos with planted defects and check each one is caught, an
 | `skills/repo-kickoff/scripts/` | Deterministic steps and their tests |
 | `.claude-plugin/` | Plugin and marketplace manifests |
 | `.githooks/` | This repo's own secret gate, installed by its own script |
-| `docs/decisions/` | Why things are the way they are, including rejected alternatives |
-| `docs/HANDOVER_*.md` | Current status and next steps |
+| `docs/GUIDE.md` | User guide |
+| `CHANGELOG.md` | What changed in each version |
 
 ## License
 
