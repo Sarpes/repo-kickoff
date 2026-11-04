@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "A Claude Code skill for starting and auditing repositories",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "plugins": [
     {
       "name": "repo-kickoff",
       "source": "./",
       "description": "Start a new repository whose setup can be reproduced and checked, and audit an existing repo's README, requirements and .gitignore against its code.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": {
         "name": "Sarp Esenyel"
       },

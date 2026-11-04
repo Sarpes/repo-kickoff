@@ -19,6 +19,8 @@ Measured on a small Python project ("kur-takip": TCMB daily exchange rates → S
 
 In audit mode, one of two sessions without the skill sampled the README's 29 `file:line` references and missed the one stale reference; with the skill, both checked all 29 and caught it. Method and numbers: [docs/decisions/0003-measured-before-and-after.md](docs/decisions/0003-measured-before-and-after.md).
 
+**Full documentation:** [docs/GUIDE.md](docs/GUIDE.md): how each step works, the scripts, the secret gate, installing on other computers, troubleshooting.
+
 ## Requirements
 
 - Python **3.11+** (the scripts use `tomllib`); tested on 3.13.9. Standard library only, nothing to `pip install`.
