@@ -80,7 +80,7 @@ Read-only. Exit code 1 if any **high** or **medium** finding exists, else 0.
 |---|---|
 | REQ | Third-party imports (parsed from the code, not guessed) missing from every `requirements*.txt` in the repo (a container's `worker/requirements.txt` counts too) and `pyproject.toml`; listed packages never imported; unpinned versions (info); no stated Python version. Import names are mapped to package names even when the package is not installed (`docx` → `python-docx`, `google.oauth2` → `google-auth`). |
 | DOC | README references to files that are not in the repo; `file:LINE` references beyond the end of the file; all in-range references as `verify` items |
-| IGN | Files tracked although `.gitignore` ignores them; tracked files named like secrets (`.env`, `secrets.toml`, `*_secrets.bat`, `client_secret*.json`, `credentials.json`, `.pem`, `.key`, …); lines that look like secrets (GitHub/Anthropic/AWS keys, private keys, `password = "…"`); tracked files over 5 MB |
+| IGN | Files tracked although `.gitignore` ignores them; tracked files named like secrets (`.env`, any `*.env`, `secrets.toml`, `*_secrets.bat`, `client_secret*.json`, `credentials.json`, `.pem`, `.key`, …); lines that look like secrets (GitHub/Anthropic/AWS keys, private keys, `password = "…"`, unquoted `SOME_API_KEY=<16+ characters>`); tracked files over 5 MB |
 
 Severities: `high`, `medium` (fix before pushing), `verify` (open and compare by hand), `low`, `info` (often a deliberate choice: check the repo says so).
 
@@ -103,8 +103,8 @@ Commit `.githooks/` and `.gitattributes`. After cloning the repo anywhere else, 
 
 ## 6. The secret gate in daily use
 
-- **What it blocks:** a commit whose staged files are named like secret files or contain lines that look like credentials. The value itself is never printed.
-- **What it allows:** references to a value kept elsewhere, such as `os.environ["MY_SETTING"]`, `"$MY_SETTING"`, `%MY_SETTING%`; files ending in `.example`, `.sample`, `.template`.
+- **What it blocks:** a commit whose staged files are named like secret files or contain lines that look like credentials. That includes unquoted `.env`-style lines (an upper-case name ending in `API_KEY`, `TOKEN`, `SECRET` or `PASSWORD`, followed by `=` and a value of 16 or more characters) and any file name ending in `.env`. The value itself is never printed.
+- **What it allows:** references to a value kept elsewhere, such as `os.environ["MY_SETTING"]`, `"$MY_SETTING"`, `%MY_SETTING%`; an empty value such as `MY_SETTING=`; files ending in `.example`, `.sample`, `.template`.
 - **A deliberate exception** (for example a fake value in a test): end that line with `secret-gate: allow`.
 - **Python on Windows:** the hook does not trust the `python3` command, because the Windows Store placeholder answers to it without running anything. It asks each candidate (`python3`, `python`, `py`) to print a marker and uses the first that does. If none works, the commit is refused rather than let through.
 - **Do not bypass it** with `git commit --no-verify`: fix the finding, or mark a genuine false positive as above.
