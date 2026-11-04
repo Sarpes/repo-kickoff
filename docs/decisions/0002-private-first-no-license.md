@@ -1,6 +1,6 @@
 # 0002 · Private first, no license until the owner decides
 
-Date: 2026-11-04 · Status: accepted (owner's decision)
+Date: 2026-11-04 · Status: superseded by [0004](0004-public-under-mit.md) the same day (owner's decision)
 
 ## Context
 The skill is meant to be shareable as a Claude Code plugin. Installing a plugin from GitHub needs a public repository; reuse by others needs a license.
