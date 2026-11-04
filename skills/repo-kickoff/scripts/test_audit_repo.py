@@ -41,10 +41,12 @@ def make_repo(root: Path, dirty: bool):
     readme += "Helper: `app/util.py:40`.\n" if dirty else "Helper: `app/util.py:1`.\n"
     (root / "README.md").write_text(readme, encoding="utf-8")
     (root / ".gitignore").write_text(".env\n", encoding="utf-8")
-    cfg = 'db_password = "$DB_PASSWORD"\n'
+    cfg = 'db_password = "$DB_PASSWORD"\n' + 'api_key = os.environ["EXAMPLE_API_KEY"]\ntoken = compute_token_for_request(user)\n'
     if dirty:
         cfg += f'password = "hunter22"\ntoken = "{FAKE_TOKEN}"\n'  # planted test secret, secret-gate: allow
         (root / ".env").write_text("A=1\n", encoding="utf-8")
+        (root / "UsersExampleUser.env").write_text("A=1\n", encoding="utf-8")  # name ends in .env
+        cfg += "EXAMPLE_API_KEY=" + "0123456789abcdef" * 2 + "\n"  # unquoted env-style, obviously fake
     (root / "config.py").write_text(cfg, encoding="utf-8")
     run = lambda *a: subprocess.run(["git", "-C", str(root), *a], check=True, capture_output=True)
     run("init", "-q")
@@ -65,10 +67,12 @@ EXPECT_DIRTY = [
     ("namespace package mapped by its full module", "lists `google-auth`"),
     ("import name != package name, not installed", "lists `python-docx`"),
     ("line out of range", "`app/util.py:40` but the file has 1 lines"),
-    ("plain password", "config.py:2  line looks like a secret"),
-    ("github token", "config.py:3  line looks like a secret"),
+    ("plain password", "config.py:4  line looks like a secret"),
+    ("github token", "config.py:5  line looks like a secret"),
     ("ignored but tracked", ".env  tracked although .gitignore ignores it"),
     ("secret file name", ".env  tracked file name looks like a secret"),
+    ("name ending in .env", "UsersExampleUser.env  tracked file name looks like a secret"),
+    ("unquoted env-style value", "config.py:6  line looks like a secret"),
 ]
 FORBID_CLEAN = ["config.py:1", "looks like a secret", "lists `", "but the file has", "`pytest`", "no Python version"]
 
