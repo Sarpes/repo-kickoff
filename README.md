@@ -26,7 +26,7 @@ In audit mode, one of two sessions without the skill sampled the README's 29 `fi
 
 ## Install
 
-As a plugin (once the repository is public):
+As a plugin:
 
 ```
 /plugin marketplace add Sarpes/repo-kickoff
@@ -65,6 +65,6 @@ Both build throwaway repos with planted defects and check each one is caught, an
 | `docs/decisions/` | Why things are the way they are, including rejected alternatives |
 | `docs/HANDOVER_*.md` | Current status and next steps |
 
-## Copyright
+## License
 
-© 2026 Sarp Esenyel. All rights reserved. No license is granted yet.
+[MIT](LICENSE) © 2026 Sarp Esenyel.

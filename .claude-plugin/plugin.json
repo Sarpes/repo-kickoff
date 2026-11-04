@@ -5,6 +5,7 @@
   "author": {
     "name": "Sarp Esenyel"
   },
+  "license": "MIT",
   "keywords": ["repository", "setup", "readme", "requirements", "gitignore", "secrets", "audit", "python"],
   "skills": ["./skills/repo-kickoff"]
 }
