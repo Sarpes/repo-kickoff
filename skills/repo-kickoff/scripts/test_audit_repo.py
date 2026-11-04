@@ -25,6 +25,12 @@ def make_repo(root: Path, dirty: bool):
     (root / "tests").mkdir()
     (root / "tests" / "test_main.py").write_text("import pytest\n", encoding="utf-8")
     (root / "requirements-dev.txt").write_text("-r requirements.txt\npytest==8.4.2\n", encoding="utf-8")
+    # a second environment (e.g. a Docker worker) with its own requirements file in a subfolder;
+    # import names differ from package names and the packages need not be installed here
+    (root / "worker").mkdir()
+    (root / "worker" / "job.py").write_text("import docx\nfrom fpdf import FPDF\nfrom google.oauth2 import service_account\n", encoding="utf-8")
+    if not dirty:
+        (root / "worker" / "requirements.txt").write_text("python-docx==1.1.2\nfpdf2==2.8.1\ngoogle-auth==2.40.0\n", encoding="utf-8")
     if not dirty:
         (root / ".python-version").write_text("3.13\n", encoding="utf-8")
         # files the skill itself creates must not be reported as secrets
@@ -56,6 +62,8 @@ def audit(root: Path):
 EXPECT_DIRTY = [
     ("missing requirement", "imports `yaml` but no requirements file or pyproject lists `pyyaml`"),
     ("no python version", "no Python version stated"),
+    ("namespace package mapped by its full module", "lists `google-auth`"),
+    ("import name != package name, not installed", "lists `python-docx`"),
     ("line out of range", "`app/util.py:40` but the file has 1 lines"),
     ("plain password", "config.py:2  line looks like a secret"),
     ("github token", "config.py:3  line looks like a secret"),

@@ -20,8 +20,9 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-KNOWN = {"sklearn": "scikit-learn", "cv2": "opencv-python", "PIL": "pillow", "yaml": "pyyaml",
-         "bs4": "beautifulsoup4", "dotenv": "python-dotenv", "psycopg2": "psycopg2-binary"}
+# One mapping for both scripts: import name -> distribution, namespace packages by module prefix.
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # python -I leaves the script folder off sys.path
+from audit_repo import KNOWN, NAMESPACE, import_key  # noqa: E402
 
 
 def py_files(repo):
@@ -47,7 +48,7 @@ def scan(repo, files):
                 top = n.split(".")[0]
                 if top in sys.stdlib_module_names or top in local or top == "__future__":
                     continue
-                (dev if is_dev(f) else runtime).setdefault(top, f)
+                (dev if is_dev(f) else runtime).setdefault(import_key(n), f)
     return runtime, dev
 
 
@@ -55,7 +56,7 @@ def resolve(tops):
     dist_of = {k: v[0] for k, v in md.packages_distributions().items() if v}
     pins, missing = {}, []
     for top in sorted(tops):
-        dist = KNOWN.get(top) or dist_of.get(top) or top
+        dist = KNOWN.get(top) or (top if top in NAMESPACE.values() else dist_of.get(top)) or top
         try:
             pins[dist] = md.version(dist)
         except md.PackageNotFoundError:
