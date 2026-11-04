@@ -1,5 +1,7 @@
 # repo-kickoff
 
+![repo-kickoff](assets/logo.png)
+
 A Claude Code skill with two modes:
 
 - **Kickoff**: start a new repository whose setup can be reproduced and checked.
