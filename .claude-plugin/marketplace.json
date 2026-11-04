@@ -11,12 +11,12 @@
     {
       "name": "repo-kickoff",
       "source": "./",
-      "description": "Start a new repository whose setup can be reproduced and checked, and audit an existing repo's README, requirements and .gitignore against its code.",
+      "description": "Start a new repository, locally and on GitHub, whose setup can be reproduced and checked, with a pre-commit gate that blocks common API keys and passwords; audit an existing repo's README, requirements, .gitignore and committed secrets.",
       "version": "0.1.3",
       "author": {
         "name": "Sarp Esenyel"
       },
-      "keywords": ["repository", "setup", "readme", "requirements", "gitignore", "secrets", "audit"],
+      "keywords": ["repository", "github", "git", "setup", "readme", "requirements", "gitignore", "secrets", "api-keys", "audit"],
       "category": "workflow"
     }
   ]
