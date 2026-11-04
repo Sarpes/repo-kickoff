@@ -20,14 +20,15 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # python -I ignores PYTHONIOENCODING
 
-# Keep NAME/TEXT identical to the gate in install_secret_gate.py (test_secret_gate.py checks both agree).
-SECRET_NAME = re.compile(r"(^|/)(\.env(\..+)?|[^/]*secrets?(\.[^/]*)?\.(json|ya?ml|toml|ini|cfg|txt|env|bat|ps1|sh)"
+# Keep NAME/TEXT/ENV identical to the gate in install_secret_gate.py (test_secret_gate.py checks both agree).
+SECRET_NAME = re.compile(r"(^|/)(\.env(\..+)?|[^/]+\.env|[^/]*secrets?(\.[^/]*)?\.(json|ya?ml|toml|ini|cfg|txt|env|bat|ps1|sh)"
                          r"|client_secret[^/]*\.json|\.?credentials?(\.[^/]*)?\.(json|ya?ml|toml|ini)|[^/]*\.(pem|key|p12|pfx)"
                          r"|id_rsa[^/]*|\.netrc|\.npmrc|\.pypirc)$", re.I)
 SECRET_TEXT = re.compile(
     r"(ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-(ant-)?[A-Za-z0-9_-]{24,}"
     r"|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----"
     r"|(password|passwd|pwd|token|api_key|apikey|secret)\s*[=:]\s*['\"](?![$%{<])[^'\"\s]{6,}['\"])", re.I)  # "$VAR", "%VAR%", "{x}", "<x>" are references
+SECRET_ENV = re.compile(r"^\s*(export\s+)?[A-Z][A-Z0-9_]*(API_KEY|TOKEN|SECRET|PASSWORD)\s*=\s*[^\s\x27\x22$]{16,}")  # unquoted env-style value; case-sensitive, so it needs no ignorecase
 # Same exemptions as the installed gate: templates and the gate's own source are not secrets.
 SAFE_NAME = re.compile(r"\.example$|\.sample$|\.template$|(^|/)\.githooks/secret_gate\.py$", re.I)
 BIG = 5 * 1024 * 1024
@@ -192,7 +193,7 @@ def check_ignore(repo, files):
         except (UnicodeDecodeError, OSError):
             continue
         for i, line in enumerate(text.splitlines(), 1):
-            if SECRET_TEXT.search(line) and not line.rstrip().endswith("secret-gate: allow"):
+            if (SECRET_TEXT.search(line) or SECRET_ENV.search(line)) and not line.rstrip().endswith("secret-gate: allow"):
                 findings.append(("IGN", "high", f"{f}:{i}", "line looks like a secret (value not printed)"))
     return findings
 
