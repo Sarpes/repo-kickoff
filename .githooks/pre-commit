@@ -1,0 +1,9 @@
+#!/bin/sh
+# Pre-commit hook installed by repo-kickoff: run the secret gate with a Python that really runs.
+for p in python3 python py; do
+  if [ "$("$p" -c "print('gate-ok')" 2>/dev/null)" = "gate-ok" ]; then
+    exec "$p" "$(git rev-parse --show-toplevel)/.githooks/secret_gate.py"
+  fi
+done
+echo "secret gate: no working Python found - commit refused (fail-closed)" >&2
+exit 1
