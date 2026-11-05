@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7 · 2026-11-05
+- Fix: in a `src/` layout, the project's own package (for example `src/call_pipeline/`) is no longer reported as a missing dependency. Before, `audit_repo.py` raised a false **high** finding ("imports `call_pipeline` but no requirements file or pyproject lists `call-pipeline`") and `pin_requirements.py` could stop with "not installed" or pin the project as its own dependency. Now every folder that holds tracked Python code counts as first-party, in both scripts.
+- `test_audit_repo.py` includes a `src/` package imported by a test.
+
 ## 0.1.6 · 2026-11-05
 - Fix: the secret gate now installs on macOS and Linux. `install_secret_gate.py` wrote `.githooks/pre-commit` without the execute bit, so git skipped the hook there, the self-test stopped with `self-test FAILED - gate not installed`, and kickoff step 5 could not finish. The hook is now `chmod 755` on disk and staged as `100755`, so clones get the bit too. Windows was not affected.
 - `test_secret_gate.py` checks the hook's recorded mode (`100755`), which also fails on Windows when the bit is missing, and the on-disk execute bit elsewhere.
