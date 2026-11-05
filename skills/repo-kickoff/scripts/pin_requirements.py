@@ -37,7 +37,8 @@ def is_dev(path):
 
 
 def scan(repo, files):
-    local = {Path(f).parts[0].removesuffix(".py") for f in files} | {Path(f).stem for f in files}
+    local = {Path(f).parts[0].removesuffix(".py") for f in files} | {Path(f).stem for f in files} \
+        | {d for f in files if f.endswith(".py") for d in Path(f).parent.parts}  # src/<pkg>/ is first-party
     runtime, dev = {}, {}
     for f in files:
         tree = ast.parse((repo / f).read_text(encoding="utf-8", errors="replace"))

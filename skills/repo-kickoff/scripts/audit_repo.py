@@ -67,7 +67,10 @@ def tracked(repo):
 
 def check_requirements(repo, files):
     findings = []
-    local = {Path(f).parts[0].removesuffix(".py") for f in files} | {Path(f).stem for f in files if f.endswith(".py")}
+    # Every folder that holds Python code is first-party, so the project's own package in a
+    # src/ layout (src/<pkg>/) is not reported as a missing dependency.
+    local = {Path(f).parts[0].removesuffix(".py") for f in files} | {Path(f).stem for f in files if f.endswith(".py")} \
+        | {d for f in files if f.endswith(".py") for d in Path(f).parent.parts}
     imports = {}
     for f in files:
         if not f.endswith(".py"):
