@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.8 · 2026-11-05
+- New audit check **HIST**: secret-looking file names and lines in the git history (earlier versions and deleted files) are reported as high findings with the commit, never the value. A deleted key is still readable by anyone who clones; the fix is to revoke it. A line still in the current file is reported once, under IGN.
+- README, guide and privacy policy now describe the GitHub step as it behaves: kickoff ends by creating a private repository and pushing, through commands Claude Code shows for permission; say "no GitHub" to skip it. They used to say Claude asks first, which test runs did not confirm.
+- Privacy policy and README: audit mode also reads the repository's git history.
+- README: contributors run `git config core.hooksPath .githooks` once after cloning; the guide's step 6 notes that public repositories keep decision records and status notes in a private companion repository.
+- A test fixture uses a neutral file name.
+
 ## 0.1.7 · 2026-11-05
 - Fix: in a `src/` layout, the project's own package (for example `src/call_pipeline/`) is no longer reported as a missing dependency. Before, `audit_repo.py` raised a false **high** finding ("imports `call_pipeline` but no requirements file or pyproject lists `call-pipeline`") and `pin_requirements.py` could stop with "not installed" or pin the project as its own dependency. Now every folder that holds tracked Python code counts as first-party, in both scripts.
 - `test_audit_repo.py` includes a `src/` package imported by a test.
