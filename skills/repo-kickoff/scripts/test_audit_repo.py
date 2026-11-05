@@ -25,6 +25,11 @@ def make_repo(root: Path, dirty: bool):
     (root / "tests").mkdir()
     (root / "tests" / "test_main.py").write_text("import pytest\n", encoding="utf-8")
     (root / "requirements-dev.txt").write_text("-r requirements.txt\npytest==8.4.2\n", encoding="utf-8")
+    # the project's own package in a src/ layout, imported by its tests, is first-party, not a missing dependency
+    (root / "src" / "call_pipeline").mkdir(parents=True)
+    (root / "src" / "call_pipeline" / "__init__.py").write_text("", encoding="utf-8")
+    (root / "src" / "call_pipeline" / "core.py").write_text("X = 1\n", encoding="utf-8")
+    (root / "tests" / "test_core.py").write_text("from call_pipeline import core\n", encoding="utf-8")
     # a second environment (e.g. a Docker worker) with its own requirements file in a subfolder;
     # import names differ from package names and the packages need not be installed here
     (root / "worker").mkdir()
@@ -74,7 +79,7 @@ EXPECT_DIRTY = [
     ("name ending in .env", "UsersExampleUser.env  tracked file name looks like a secret"),
     ("unquoted env-style value", "config.py:6  line looks like a secret"),
 ]
-FORBID_CLEAN = ["config.py:1", "looks like a secret", "lists `", "but the file has", "`pytest`", "no Python version"]
+FORBID_CLEAN = ["config.py:1", "looks like a secret", "lists `", "but the file has", "`pytest`", "no Python version", "`call_pipeline`"]
 
 fails = 0
 with tempfile.TemporaryDirectory() as d:
