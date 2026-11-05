@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.9 · 2026-11-06
+- Fix: kickoff step 2 fetched the `.gitignore` template with `gh api /gitignore/templates/Python`; in Git Bash on Windows the leading `/` is rewritten into a Windows path (`invalid API endpoint`), and without a signed-in `gh` the call fails too. Sessions then wrote the file partly from memory. Now: `gh api gitignore/templates/Python`, and if `gh` fails, the same public file from `raw.githubusercontent.com` with `curl`; never from memory. Measured in test sessions: template match 0.57–0.58 before, 1.0 in 5 of 5 runs after.
+- `SKILL.md` wording: the Windows Store `python3` stub exits 49 (not 0); for public repositories, decision records and status notes go to a private companion repository; audit step 1 mentions the history check.
+- README and privacy policy name the `raw.githubusercontent.com` fallback.
+
 ## 0.1.8 · 2026-11-05
 - New audit check **HIST**: secret-looking file names and lines in the git history (earlier versions and deleted files) are reported as high findings with the commit, never the value. A deleted key is still readable by anyone who clones; the fix is to revoke it. A line still in the current file is reported once, under IGN.
 - README, guide and privacy policy now describe the GitHub step as it behaves: kickoff ends by creating a private repository and pushing, through commands Claude Code shows for permission; say "no GitHub" to skip it. They used to say Claude asks first, which test runs did not confirm.
