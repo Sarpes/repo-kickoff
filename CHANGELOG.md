@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6 · 2026-11-05
+- Fix: the secret gate now installs on macOS and Linux. `install_secret_gate.py` wrote `.githooks/pre-commit` without the execute bit, so git skipped the hook there, the self-test stopped with `self-test FAILED - gate not installed`, and kickoff step 5 could not finish. The hook is now `chmod 755` on disk and staged as `100755`, so clones get the bit too. Windows was not affected.
+- `test_secret_gate.py` checks the hook's recorded mode (`100755`), which also fails on Windows when the bit is missing, and the on-disk execute bit elsewhere.
+- README: install commands for the terminal (`claude plugin ...`); note that macOS and Linux often have only `python3`.
+
 ## 0.1.5 · 2026-11-04
 - Secret gate and audit now also refuse unquoted env-style secrets (`SOME_API_KEY=` followed by 16 or more characters; names ending in `API_KEY`, `TOKEN`, `SECRET` or `PASSWORD`, upper case, optional `export`) and any file whose name ends in `.env` (for example `UsersName.env`), not only an exact `.env`. Before, both were accepted.
 - Empty templates (`SOME_API_KEY=`) and code that reads the environment stay accepted.
