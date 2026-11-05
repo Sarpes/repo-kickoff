@@ -1,7 +1,7 @@
 {
   "name": "repo-kickoff",
   "description": "Start a new repository, locally and as a private GitHub repo, whose setup can be reproduced and checked (pinned dependencies, Python version, a tested pre-commit gate that blocks common API keys and passwords, main before branches), and audit an existing repo: README and requirements against its code, .gitignore, and secrets already committed.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "author": {
     "name": "Sarp Esenyel"
   },
