@@ -14,17 +14,17 @@ Confirm the project name and root folder with the user before creating anything.
 | # | Step | Command / output |
 |---|---|---|
 | 1 | Repo with `main` that exists BEFORE any branch | `git init -b main`, `git commit --allow-empty -m "Initialize repository" -m "Empty root commit so main exists as the target of the first pull request."`, then `git switch -c chore/scaffold`. A branch opened before the first commit leaves no `main` for the PR to target. Every commit, this one included, has a body saying why. |
-| 2 | `.gitignore` | Start from GitHub's template: `gh api /gitignore/templates/Python --jq .source` (list: `gh api /gitignore/templates`). Append a commented project block: `.env`, `.env.*`, `!.env.example`, data/output folders, local DBs. |
+| 2 | `.gitignore` | Start from GitHub's template: `gh api gitignore/templates/Python --jq .source` (no leading `/`: Git Bash turns it into a Windows path). If `gh` fails: `curl -sSf https://raw.githubusercontent.com/github/gitignore/main/Python.gitignore`. Never write the template from memory. Append a commented project block: `.env`, `.env.*`, `!.env.example`, data/output folders, local DBs. |
 | 3 | Code and tests, in a venv | Fetch one real sample of any external input before writing parsers. Save samples inside the project root: `tests/fixtures/` if tests use them, otherwise a git-ignored `scratch/`. Never create folders next to the root. |
 | 4 | Pinned dependencies | With the venv's interpreter, after tests pass: `python scripts/pin_requirements.py <repo> --write` → `requirements.txt` (`==`), `requirements-dev.txt`, `.python-version`. Ranges (`>=`) are for libraries others install; an app records what it ran with. |
 | 5 | Secret gate in code, not a promise | `python scripts/install_secret_gate.py <repo>`; it proves itself on a throwaway repo before installing. Commit `.githooks/`. |
-| 6 | README | What · Why · Requirements (Python version, services, env vars) · Install · Run · Test · Layout · Decisions (`docs/decisions/`) · Status (`docs/HANDOVER_*.md`). |
+| 6 | README | What · Why · Requirements (Python version, services, env vars) · Install · Run · Test · Layout · Decisions (`docs/decisions/`) · Status (`docs/HANDOVER_*.md`). In a public repo, keep decisions and status in a private companion repo and do not link it. |
 | 7 | Gate before the first push | `python scripts/audit_repo.py <repo>` → 0 high, 0 medium. Open every `verify` line. |
 | 8 | GitHub | `gh repo create <owner>/<name> --private --source . --remote origin`, push `main`, push the branch, open a PR. If `gh` fails, say so and list the commands. |
 
 ## Audit
 
-1. `python scripts/audit_repo.py <repo>` first. It covers imports vs requirements, Python version, README file/line references, ignored-but-tracked files and secrets, in seconds. Do not rewrite these scans.
+1. `python scripts/audit_repo.py <repo>` first. It covers imports vs requirements, Python version, README file/line references, ignored-but-tracked files and secrets, including secrets that are only in the git history, in seconds. Do not rewrite these scans.
 2. Check **every** `verify` line: open the referenced lines and compare them to the README sentence. Never sample. One stale range among 29 correct ones is the typical defect.
 3. Judgment checks the script cannot make:
    - Does the README's install → run path work from a clean clone, and does it produce the README's numbers?
@@ -40,6 +40,6 @@ Confirm the project name and root folder with the user before creating anything.
 | Branch before first commit → no `main` | Step 1 order |
 | `>=` ranges in an app's requirements | `pin_requirements.py` from the tested venv |
 | "I scanned for secrets" with no hook | `install_secret_gate.py` |
-| Hook calls `python3`; a Windows Store stub exits 0 without running | The installed hook checks a printed marker and fails closed |
+| Hook trusts `python3`; on Windows it can be the Store stub, which runs nothing (exit 49) | The installed hook checks a printed marker and fails closed |
 | Sampling README references | Check all `verify` lines |
 | Flagging documented absences as bugs | A README "not in this repo" note makes a missing file intentional |

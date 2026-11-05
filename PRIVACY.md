@@ -17,7 +17,7 @@ It does not read your environment variables or credential files. It looks for cr
 
 | When | What | To |
 |---|---|---|
-| Kickoff step 2 | A request for GitHub's official `.gitignore` template (`gh api /gitignore/templates/<Language>`), with your own `gh` login | GitHub |
+| Kickoff step 2 | A request for GitHub's official `.gitignore` template (`gh api gitignore/templates/<Language>`, with your own `gh` login; if `gh` is missing or not signed in, a plain download of the same public file from `raw.githubusercontent.com/github/gitignore`) | GitHub |
 | Kickoff step 8, through commands Claude Code shows for your permission unless you allowed them in advance; say "no GitHub" in your request to skip it | `gh repo create` makes a private repository under your GitHub account; `git push` uploads your project to it, with your own credentials | GitHub |
 
 Audit mode sends nothing. GitHub's handling of those requests is governed by [GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
