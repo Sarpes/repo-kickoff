@@ -70,12 +70,16 @@ def install(repo: Path):
     hooks.mkdir(exist_ok=True)
     (hooks / "secret_gate.py").write_text(GATE, encoding="utf-8", newline="\n")
     (hooks / "pre-commit").write_text(HOOK, encoding="utf-8", newline="\n")
+    (hooks / "pre-commit").chmod(0o755)  # git skips a hook without the execute bit on macOS/Linux
     attrs = repo / ".gitattributes"
     existing = attrs.read_text(encoding="utf-8").splitlines() if attrs.exists() else []
     if ATTR not in existing:
         attrs.write_text("\n".join(existing + [ATTR]) + "\n", encoding="utf-8", newline="\n")
     subprocess.run(["git", "-C", str(repo), "config", "core.hooksPath", ".githooks"], check=True)
-    subprocess.run(["git", "-C", str(repo), "update-index", "--chmod=+x", ".githooks/pre-commit"], capture_output=True)
+    # Stage the hook as 100755 so clones get the execute bit. `update-index --chmod` did nothing
+    # here: it only works on files already in the index, and a fresh install has none.
+    # check=True: this step failing silently is how the bug went unnoticed.
+    subprocess.run(["git", "-C", str(repo), "add", "--chmod=+x", ".githooks/pre-commit"], check=True)
 
 
 def commit(repo: Path, name: str, content: str) -> bool:
@@ -111,7 +115,8 @@ def main():
     if not self_test():
         sys.exit("self-test FAILED - gate not installed")
     install(repo)
-    print(f"installed: {repo / '.githooks'} (core.hooksPath=.githooks) and `{ATTR}` in .gitattributes."
+    print(f"installed: {repo / '.githooks'} (core.hooksPath=.githooks) and `{ATTR}` in .gitattributes;"
+          " .githooks/pre-commit is staged as executable (100755)."
           " Commit .githooks/ and .gitattributes so clones get it; after a clone run: git config core.hooksPath .githooks")
 
 
