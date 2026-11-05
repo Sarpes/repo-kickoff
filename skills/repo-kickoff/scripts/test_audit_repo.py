@@ -59,6 +59,19 @@ def make_repo(root: Path, dirty: bool):
     if dirty:
         run("add", "-f", ".env")
     run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "fixture")
+    # Deleting a file does not remove it from git history: anyone who clones can still read it.
+    # dirty: a token and a secrets-named file committed, then deleted. clean: a harmless file, same path of life.
+    old = {"old_settings.py": f'token = "{FAKE_TOKEN}"\n', "backup.env": "A=1\n"} if dirty \
+        else {"old_notes.py": 'token = compute_token_for_request(user)\n'}
+    for name, content in old.items():
+        (root / name).write_text(content, encoding="utf-8")
+        run("add", "-f", name)
+    run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "add old files")
+    run("rm", "-q", *old)
+    run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "remove old files")
+    if dirty:  # a secret that is still in the current file is reported once (IGN), not again as history
+        (root / "config.py").write_text(cfg + "# edited\n", encoding="utf-8")
+        run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "edit config")
 
 
 def audit(root: Path):
@@ -78,8 +91,11 @@ EXPECT_DIRTY = [
     ("secret file name", ".env  tracked file name looks like a secret"),
     ("name ending in .env", "UsersExampleUser.env  tracked file name looks like a secret"),
     ("unquoted env-style value", "config.py:6  line looks like a secret"),
+    ("secret line only in git history", "HIST  old_settings.py:1"),
+    ("secret file name only in git history", "HIST  backup.env"),
 ]
-FORBID_CLEAN = ["config.py:1", "looks like a secret", "lists `", "but the file has", "`pytest`", "no Python version", "`call_pipeline`"]
+FORBID_CLEAN = ["config.py:1", "looks like a secret", "lists `", "but the file has", "`pytest`", "no Python version",
+                "`call_pipeline`", "HIST"]
 
 fails = 0
 with tempfile.TemporaryDirectory() as d:
@@ -94,6 +110,9 @@ with tempfile.TemporaryDirectory() as d:
         ok = needle in out
         fails += not ok
         print(f"  {'PASS' if ok else 'FAIL'}  catches {label}")
+    ok = "HIST  config.py" not in out
+    fails += not ok
+    print(f"  {'PASS' if ok else 'FAIL'}  a secret still in the current file is not reported again as history")
     if code != 1:
         fails += 1
         print("  FAIL  exit code should be 1")

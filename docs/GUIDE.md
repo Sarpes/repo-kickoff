@@ -50,9 +50,9 @@ Claude first confirms the project's **name and folder** with you, then follows t
 | 3 | Code and tests | In a virtual environment; one real sample of each external input is fetched first and kept in `tests/fixtures/` (or a git-ignored `scratch/`) inside the project | Parsers written against real data, not guesses; no stray folders. |
 | 4 | Pinned dependencies | `pin_requirements.py` writes `requirements.txt` (exact `==` versions), `requirements-dev.txt` and `.python-version` from the interpreter the tests passed in | An application should record what it ran with; ranges (`>=`) are for libraries. |
 | 5 | Secret gate | `install_secret_gate.py` proves the gate on a throwaway repo, then installs it as a git pre-commit hook | "I checked for secrets" is a promise; a hook is a check that runs on every commit. |
-| 6 | README | What · Why · Requirements (Python version, services, environment variables) · Install · Run · Test · Layout · Decisions · Status | A reader can install and run the project from the README alone. |
+| 6 | README | What · Why · Requirements (Python version, services, environment variables) · Install · Run · Test · Layout · Decisions · Status. In a public repository, decision records and status notes go to a private companion repository instead | A reader can install and run the project from the README alone; internal notes stay private. |
 | 7 | Gate before the first push | `audit_repo.py` must report 0 high and 0 medium findings; every `verify` line is opened and checked | Catches a missing dependency or a stale README before anything is public. |
-| 8 | GitHub | `gh repo create <owner>/<name> --private`, push `main`, push the branch, open a pull request | Work reaches `main` through a reviewed pull request. If `gh` is not available, Claude lists the commands instead. |
+| 8 | GitHub | `gh repo create <owner>/<name> --private`, push `main`, push the branch, open a pull request. Claude Code shows these commands for your permission unless you allowed them in advance; the skill itself does not stop to ask, so say *"no GitHub"* in your request if you do not want this step | Work reaches `main` through a reviewed pull request. If `gh` is not available, Claude lists the commands instead. |
 
 ---
 
@@ -81,6 +81,7 @@ Read-only. Exit code 1 if any **high** or **medium** finding exists, else 0.
 | REQ | Third-party imports (parsed from the code, not guessed) missing from every `requirements*.txt` in the repo (a container's `worker/requirements.txt` counts too) and `pyproject.toml`; listed packages never imported; unpinned versions (info); no stated Python version. Import names are mapped to package names even when the package is not installed (`docx` → `python-docx`, `google.oauth2` → `google-auth`). |
 | DOC | README references to files that are not in the repo; `file:LINE` references beyond the end of the file; all in-range references as `verify` items |
 | IGN | Files tracked although `.gitignore` ignores them; tracked files named like secrets (`.env`, any `*.env`, `secrets.toml`, `*_secrets.bat`, `client_secret*.json`, `credentials.json`, `.pem`, `.key`, …); lines that look like secrets (GitHub/Anthropic/AWS keys, private keys, `password = "…"`, unquoted `SOME_API_KEY=<16+ characters>`); tracked files over 5 MB |
+| HIST | The same secret rules applied to the git history: file names that are no longer tracked, and lines in earlier versions or deleted files. A secret that was committed and later deleted is still readable by anyone who clones; the finding names the commit (never the value). The fix is to revoke the key; rewriting history alone does not help once it was pushed. A line still present in the current file is reported once, under IGN |
 
 Severities: `high`, `medium` (fix before pushing), `verify` (open and compare by hand), `low`, `info` (often a deliberate choice: check the repo says so).
 
