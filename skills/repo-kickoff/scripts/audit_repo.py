@@ -8,6 +8,8 @@ Checks
   DOC  README references `path` and `path:LINE[-LINE]`: file exists, line in range
   IGN  tracked files that .gitignore says to ignore; secret-looking tracked files
        and contents; tracked files over 5 MB
+  HIST secret-looking file names and lines in earlier versions of files and in
+       deleted files, anywhere in the git history (still readable by anyone who clones)
 """
 import ast
 import importlib.metadata as md
@@ -201,6 +203,66 @@ def check_ignore(repo, files):
     return findings
 
 
+def check_history(repo, files):
+    """Same rules as check_ignore, applied to the history: names of paths that are no longer tracked,
+    and contents of every blob that is not the current version of a tracked file (those are scanned
+    above). Names come from `git log --name-only`: `rev-list --objects` lists each blob once under the
+    first path it meets, so a secrets-named file whose contents match another file would be missed."""
+    current = {line.split()[1] for line in git(repo, "ls-files", "-s").splitlines() if line.strip()}
+    path_of, hits, tracked_now, commit = {}, {}, set(files), "?"
+    for line in git(repo, "log", "--all", "--name-only", "--format=%x00%h").splitlines():
+        if line.startswith("\0"):
+            commit = line[1:]
+        elif line and line not in tracked_now and SECRET_NAME.search(line) and not SAFE_NAME.search(line):
+            hits.setdefault((line, None), commit)
+    for line in git(repo, "rev-list", "--all", "--objects").splitlines():
+        sha, _, path = line.partition(" ")
+        if path and sha not in current:
+            path_of.setdefault(sha, path)
+    out = b""
+    if path_of:
+        batch = subprocess.run(["git", "-C", str(repo), "cat-file", "--batch"],
+                               input="\n".join(path_of).encode() + b"\n", capture_output=True)
+        if batch.returncode != 0:
+            sys.exit(f"git cat-file --batch failed: {batch.stderr.decode(errors='replace').strip()}")
+        out = batch.stdout
+    pos = 0
+    while pos < len(out):
+        end = out.index(b"\n", pos)
+        sha, kind, size = (out[pos:end].split() + [b"", b"0"])[:3]
+        size, pos = int(size), end + 1
+        data, pos = out[pos:pos + size], pos + size + 1
+        path = path_of.get(sha.decode(), "")
+        if kind != b"blob" or SAFE_NAME.search(path) or size > BIG or b"\0" in data:
+            continue
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        for i, line in enumerate(text.splitlines(), 1):
+            if (SECRET_TEXT.search(line) or SECRET_ENV.search(line)) and not line.rstrip().endswith("secret-gate: allow"):
+                hits.setdefault((path, line.strip()), (sha.decode(), i))  # one finding per path and line, across versions
+    findings = []
+    now = {}  # a line still in the current file is check_ignore's finding; report history only for what is gone
+    for (path, line), ref in hits.items():
+        if line is not None and path in tracked_now:
+            if path not in now:
+                try:
+                    now[path] = {l.strip() for l in (repo / path).read_text(encoding="utf-8").splitlines()}
+                except (UnicodeDecodeError, OSError):
+                    now[path] = set()
+            if line in now[path]:
+                continue
+        if line is None:  # a name hit carries its commit; a content hit carries (blob, line number)
+            commit, where, what = ref, path, "file name looks like a secret"
+        else:
+            commit = git(repo, "log", "--all", "-1", "--format=%h", f"--find-object={ref[0]}").strip() or "?"
+            where, what = f"{path}:{ref[1]}", "line looks like a secret (value not printed)"
+        findings.append(("HIST", "high", where, f"{what}; in git history (commit {commit}) although not in the current files."
+                         " Deleting it does not remove it from clones: revoke the key"))
+    return findings
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if len(args) != 1:
@@ -209,7 +271,7 @@ def main():
     repo = Path(args[0]).resolve()
     files = tracked(repo)
     req, wanted = check_requirements(repo, files)
-    findings = req + check_readme(repo, files) + check_ignore(repo, files)
+    findings = req + check_readme(repo, files) + check_ignore(repo, files) + check_history(repo, files)
     order = {"high": 0, "medium": 1, "verify": 2, "low": 3, "info": 4}
     findings.sort(key=lambda x: (order[x[1]], x[0], x[2]))
     if "--json" in sys.argv:

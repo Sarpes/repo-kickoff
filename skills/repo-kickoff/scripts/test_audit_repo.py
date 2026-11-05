@@ -69,6 +69,9 @@ def make_repo(root: Path, dirty: bool):
     run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "add old files")
     run("rm", "-q", *old)
     run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "remove old files")
+    if dirty:  # a secret that is still in the current file is reported once (IGN), not again as history
+        (root / "config.py").write_text(cfg + "# edited\n", encoding="utf-8")
+        run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "edit config")
 
 
 def audit(root: Path):
@@ -107,6 +110,9 @@ with tempfile.TemporaryDirectory() as d:
         ok = needle in out
         fails += not ok
         print(f"  {'PASS' if ok else 'FAIL'}  catches {label}")
+    ok = "HIST  config.py" not in out
+    fails += not ok
+    print(f"  {'PASS' if ok else 'FAIL'}  a secret still in the current file is not reported again as history")
     if code != 1:
         fails += 1
         print("  FAIL  exit code should be 1")
