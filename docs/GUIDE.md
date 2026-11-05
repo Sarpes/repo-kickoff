@@ -149,7 +149,7 @@ The same lines work in bash on macOS and Linux.
 Copy the folder `skills/repo-kickoff/` from this repository to `~/.claude/skills/repo-kickoff/`. This version does not update itself; copy again for a new release.
 
 ### Updating and removing
-- Update: `claude plugin update repo-kickoff@repo-kickoff`. A new version is offered only when the version number in `.claude-plugin/plugin.json` changes (see §9).
+- Update: `claude plugin marketplace update repo-kickoff` (fetches the latest catalog), then `claude plugin update repo-kickoff@repo-kickoff`, then restart Claude Code. A new version is offered only when the version number in `.claude-plugin/plugin.json` changes (see §9).
 - Remove: `claude plugin uninstall repo-kickoff@repo-kickoff`.
 
 ---

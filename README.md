@@ -2,14 +2,46 @@
 
 ![repo-kickoff](assets/logo.png)
 
-A Claude Code skill with two modes:
+A [Claude Code](https://code.claude.com) skill that sets up new repositories properly and checks existing ones. A **skill** is a set of instructions plus small scripts that Claude loads only when a request needs them; you do not call it by name.
 
-- **Kickoff**: start a new repository whose setup can be reproduced and checked.
-- **Audit**: check an existing repository's README, requirements and `.gitignore` against its code, without changing anything.
+It has two modes:
+
+| Mode | You say | You get |
+|---|---|---|
+| **Kickoff** | "new project", "set up the repo", "yeni proje" | A git repository with a `main` branch, GitHub's `.gitignore` template, dependencies pinned to the exact versions your tests passed with, the Python version written down, a check that refuses commits containing API keys or passwords, a README, and (if you agree) a private GitHub repository with a pull request. |
+| **Audit** | "audit this repo", "does the README match the code", "repoyu denetle" | A read-only report: imports missing from `requirements.txt`, no stated Python version, README references to files or lines that do not exist, files tracked although `.gitignore` ignores them, secrets already committed. Nothing is changed. |
+
+It is written for Python projects; the git, `.gitignore`, secret-check and README parts work for any language.
+
+## Install
+
+Requirements: [Claude Code](https://code.claude.com), git, and Python **3.11 or later**. Check with `python --version` (on macOS and Linux the command is often `python3`; on Windows it must print a version, not open the Microsoft Store). Optional: the GitHub CLI `gh`, signed in with `gh auth login`, for the GitHub step.
+
+In a terminal:
+
+```
+claude plugin marketplace add Sarpes/repo-kickoff
+claude plugin install repo-kickoff@repo-kickoff
+```
+
+Then start a **new** Claude Code session. `claude plugin list` should show `repo-kickoff@repo-kickoff` as enabled.
+
+Inside a session, `/plugin` opens the plugin manager, where you can add the marketplace `Sarpes/repo-kickoff` and install from it. Without the plugin system, copy the folder `skills/repo-kickoff/` to `~/.claude/skills/repo-kickoff/`.
+
+Update: `claude plugin marketplace update repo-kickoff`, then `claude plugin update repo-kickoff@repo-kickoff`. Remove: `claude plugin uninstall repo-kickoff@repo-kickoff`.
+
+## Try it
+
+- **Audit**: open Claude Code in one of your existing repositories and say *"audit this repo"*. You get findings by severity (`high`, `medium`: fix before pushing; `verify`: a README line Claude opens and compares; `low`, `info`), each with a file and line.
+- **Kickoff**: in an empty folder, say *"new project: a script that …"*. Claude first confirms the project name and folder with you, then works through the steps; it asks before creating anything on GitHub.
+
+## Feedback
+
+This is an early version and feedback is welcome: what worked, what was confusing, false alarms in the audit, what you missed. Open an [issue](https://github.com/Sarpes/repo-kickoff/issues) and include your operating system and Claude Code version (`claude --version`).
 
 ## Why
 
-Measured on a small Python project ("kur-takip": TCMB daily exchange rates → SQLite), three fresh Claude Code sessions each. Without the skill, agents wrote good code and tests but:
+Measured on a small Python project ("kur-takip": TCMB daily exchange rates → SQLite), three fresh Claude Code sessions each. Without the skill, agents wrote good code and tests but skipped the parts that make a repository reproducible and safe:
 
 | Criterion | Without skill | With skill |
 |---|---|---|
@@ -19,15 +51,9 @@ Measured on a small Python project ("kur-takip": TCMB daily exchange rates → S
 | `main` exists before the first branch | 2/3 | 3/3 |
 | Audit findings (high + medium) | 1 per repo | 0 |
 
-In audit mode, one of two sessions without the skill sampled the README's 29 `file:line` references and missed the one stale reference; with the skill, both checked all 29 and caught it. Details: [docs/GUIDE.md](docs/GUIDE.md).
+In audit mode, one of two sessions without the skill sampled the README's 29 `file:line` references and missed the one stale reference; with the skill, both checked all 29 and caught it.
 
-**Full documentation:** [docs/GUIDE.md](docs/GUIDE.md): how each step works, the scripts, the secret gate, installing on other computers, troubleshooting.
-
-## Requirements
-
-- Python **3.11+** (the scripts use `tomllib`); tested on 3.13.9. Standard library only, nothing to `pip install`. On macOS and Linux the command is often `python3` rather than `python`; on Windows, `python --version` must print a real version, not open the Microsoft Store.
-- git. GitHub CLI `gh` for the GitHub step and for fetching `.gitignore` templates (optional).
-- Built for Claude Code: the steps need a local git repository and Python. On claude.ai or in Cowork, without a local repository, the skill can only explain the steps.
+**Pinned** means `requirements.txt` records exact versions (`requests==2.33.0`) instead of ranges, so another machine installs what you tested. The **secret gate** is a git pre-commit hook: a small program git runs before every commit, which refuses the commit if a staged file looks like it contains a credential.
 
 ## What it runs, fetches and sends
 
@@ -43,22 +69,9 @@ Everything below happens on your machine, with your own tools and credentials, a
 
 No telemetry, no other services, nothing stored outside the repository you work on. Privacy policy: [PRIVACY.md](PRIVACY.md).
 
-## Install
+## The scripts on their own
 
-As a plugin, from a terminal:
-
-```
-claude plugin marketplace add Sarpes/repo-kickoff
-claude plugin install repo-kickoff@repo-kickoff
-```
-
-Start a new Claude Code session afterwards. Inside a session, `/plugin` opens the plugin manager, where you can add the marketplace `Sarpes/repo-kickoff` and install from it.
-
-Or as a personal skill: copy `skills/repo-kickoff/` to `~/.claude/skills/repo-kickoff/`.
-
-## Use
-
-Ask Claude Code to start a project or to check a repo; the skill triggers on phrases like "new project", "set up the repo", "audit this repo", "yeni proje", "repoyu denetle". The scripts also run on their own:
+The skill calls these, and they also run without Claude (Python 3.11+, standard library only):
 
 | Script | What it does |
 |---|---|
@@ -66,7 +79,7 @@ Ask Claude Code to start a project or to check a repo; the skill triggers on phr
 | `skills/repo-kickoff/scripts/pin_requirements.py <repo> [--write]` | Run with the project's venv interpreter: writes `requirements.txt` / `requirements-dev.txt` with `==` pins and `.python-version`. |
 | `skills/repo-kickoff/scripts/install_secret_gate.py <repo>` | Proves the pre-commit secret gate on a throwaway repo, then installs it (`.githooks/`, `core.hooksPath`, LF line endings via `.gitattributes`). |
 
-## Test
+Tests:
 
 ```
 python skills/repo-kickoff/scripts/test_audit_repo.py
@@ -75,7 +88,10 @@ python skills/repo-kickoff/scripts/test_secret_gate.py
 
 Both build throwaway repos with planted defects and check each one is caught, and that a clean variant raises nothing. `test_secret_gate.py` also checks that the gate and `audit_repo.py` use identical secret patterns.
 
-## Layout
+## More
+
+- **User guide:** [docs/GUIDE.md](docs/GUIDE.md): each kickoff step and why it exists, the audit checks, the secret gate in daily use, installing on several machines, troubleshooting.
+- **Changes:** [CHANGELOG.md](CHANGELOG.md).
 
 | Path | What |
 |---|---|
