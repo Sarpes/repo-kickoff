@@ -33,7 +33,7 @@ Update: `claude plugin marketplace update repo-kickoff`, then `claude plugin upd
 ## Try it
 
 - **Audit**: open Claude Code in one of your existing repositories and say *"audit this repo"*. You get findings by severity (`high`, `medium`: fix before pushing; `verify`: a README line Claude opens and compares; `low`, `info`), each with a file and line.
-- **Kickoff**: in an empty folder, say *"new project: a script that …"*. Claude first confirms the project name and folder with you, then works through the steps; it asks before creating anything on GitHub.
+- **Kickoff**: in an empty folder, say *"new project: a script that …"*. Claude first confirms the project name and folder with you, then works through the steps. The last step creates a **private** GitHub repository and pushes to it. Claude Code shows each command for your permission unless you have allowed it in advance; if you do not want GitHub, say so in your request (*"no GitHub"*).
 
 ## Feedback
 
@@ -62,9 +62,9 @@ Everything below happens on your machine, with your own tools and credentials, a
 | | What | Where |
 |---|---|---|
 | **Runs** | `git` (init, commit, branch, push) and the Python scripts in `skills/repo-kickoff/scripts/`. The scripts use only Python's standard library, call no program but `git`, and contain no network code. | your machine |
-| **Reads** | The files of the repository you point it at, and (for `pin_requirements.py`) the installed-package list of the Python you run it with. It does not read your environment variables or credential files; it looks for credential-shaped file names and lines only to warn about them, and prints file names and line numbers, never values. | your machine |
+| **Reads** | The files of the repository you point it at and, in audit mode, their earlier versions in its git history, and (for `pin_requirements.py`) the installed-package list of the Python you run it with. It does not read your environment variables or credential files; it looks for credential-shaped file names and lines only to warn about them, and prints file names and line numbers, never values. | your machine |
 | **Fetches** | GitHub's official `.gitignore` template, through `gh api /gitignore/templates/<Language>` with your own `gh` login (kickoff step 2). | GitHub |
-| **Sends** | Only in kickoff step 8, and only when you go ahead: `gh repo create` makes a **private** repository under the owner you choose, and `git push` uploads your project to it, with your own credentials. Audit mode sends nothing. | GitHub |
+| **Sends** | Only in kickoff step 8, through commands Claude Code shows for your permission unless you allowed them in advance (say *"no GitHub"* to skip the step): `gh repo create` makes a **private** repository under the owner you choose, and `git push` uploads your project to it, with your own credentials. Audit mode sends nothing. | GitHub |
 | **Installs** | Into the new repository only: `.githooks/pre-commit` and `.githooks/secret_gate.py`, `git config core.hooksPath .githooks`, one `.gitattributes` line, and `.githooks/pre-commit` staged as executable so the hook also runs on macOS and Linux. The gate runs locally on each commit and reads only the staged files. | the repository |
 
 No telemetry, no other services, nothing stored outside the repository you work on. Privacy policy: [PRIVACY.md](PRIVACY.md).
@@ -75,7 +75,7 @@ The skill calls these, and they also run without Claude (Python 3.11+, standard 
 
 | Script | What it does |
 |---|---|
-| `skills/repo-kickoff/scripts/audit_repo.py <repo>` | Read-only audit: imports vs requirements, Python version, README `file:line` references, ignored-but-tracked files, secrets. Exit 1 on high/medium findings. |
+| `skills/repo-kickoff/scripts/audit_repo.py <repo>` | Read-only audit: imports vs requirements, Python version, README `file:line` references, ignored-but-tracked files, secrets in the current files and in the git history. Exit 1 on high/medium findings. |
 | `skills/repo-kickoff/scripts/pin_requirements.py <repo> [--write]` | Run with the project's venv interpreter: writes `requirements.txt` / `requirements-dev.txt` with `==` pins and `.python-version`. |
 | `skills/repo-kickoff/scripts/install_secret_gate.py <repo>` | Proves the pre-commit secret gate on a throwaway repo, then installs it (`.githooks/`, `core.hooksPath`, LF line endings via `.gitattributes`). |
 
@@ -87,6 +87,8 @@ python skills/repo-kickoff/scripts/test_secret_gate.py
 ```
 
 Both build throwaway repos with planted defects and check each one is caught, and that a clean variant raises nothing. `test_secret_gate.py` also checks that the gate and `audit_repo.py` use identical secret patterns.
+
+Contributing: after cloning this repository, run `git config core.hooksPath .githooks` once, so its own secret gate checks your commits. Git does not turn hooks on by itself after a clone.
 
 ## More
 

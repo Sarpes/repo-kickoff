@@ -8,7 +8,7 @@ Nothing. The plugin has no telemetry, no analytics and no server of its own. It 
 
 ## What it reads
 
-- The files of the repository you point it at.
+- The files of the repository you point it at and, in audit mode, their earlier versions in its git history (to find secrets that were committed and later deleted).
 - For `pin_requirements.py`: the list of packages installed in the Python you run it with.
 
 It does not read your environment variables or credential files. It looks for credential-shaped file names and lines inside your repository only to warn you about them, and it prints file names and line numbers, never the values.
@@ -18,7 +18,7 @@ It does not read your environment variables or credential files. It looks for cr
 | When | What | To |
 |---|---|---|
 | Kickoff step 2 | A request for GitHub's official `.gitignore` template (`gh api /gitignore/templates/<Language>`), with your own `gh` login | GitHub |
-| Kickoff step 8, only when you go ahead | `gh repo create` makes a private repository under the owner you choose; `git push` uploads your project to it, with your own credentials | GitHub |
+| Kickoff step 8, through commands Claude Code shows for your permission unless you allowed them in advance; say "no GitHub" in your request to skip it | `gh repo create` makes a private repository under your GitHub account; `git push` uploads your project to it, with your own credentials | GitHub |
 
 Audit mode sends nothing. GitHub's handling of those requests is governed by [GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
 
