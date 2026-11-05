@@ -25,7 +25,7 @@ In audit mode, one of two sessions without the skill sampled the README's 29 `fi
 
 ## Requirements
 
-- Python **3.11+** (the scripts use `tomllib`); tested on 3.13.9. Standard library only, nothing to `pip install`.
+- Python **3.11+** (the scripts use `tomllib`); tested on 3.13.9. Standard library only, nothing to `pip install`. On macOS and Linux the command is often `python3` rather than `python`; on Windows, `python --version` must print a real version, not open the Microsoft Store.
 - git. GitHub CLI `gh` for the GitHub step and for fetching `.gitignore` templates (optional).
 - Built for Claude Code: the steps need a local git repository and Python. On claude.ai or in Cowork, without a local repository, the skill can only explain the steps.
 
@@ -39,18 +39,20 @@ Everything below happens on your machine, with your own tools and credentials, a
 | **Reads** | The files of the repository you point it at, and (for `pin_requirements.py`) the installed-package list of the Python you run it with. It does not read your environment variables or credential files; it looks for credential-shaped file names and lines only to warn about them, and prints file names and line numbers, never values. | your machine |
 | **Fetches** | GitHub's official `.gitignore` template, through `gh api /gitignore/templates/<Language>` with your own `gh` login (kickoff step 2). | GitHub |
 | **Sends** | Only in kickoff step 8, and only when you go ahead: `gh repo create` makes a **private** repository under the owner you choose, and `git push` uploads your project to it, with your own credentials. Audit mode sends nothing. | GitHub |
-| **Installs** | Into the new repository only: `.githooks/pre-commit` and `.githooks/secret_gate.py`, `git config core.hooksPath .githooks`, and one `.gitattributes` line. The gate runs locally on each commit and reads only the staged files. | the repository |
+| **Installs** | Into the new repository only: `.githooks/pre-commit` and `.githooks/secret_gate.py`, `git config core.hooksPath .githooks`, one `.gitattributes` line, and `.githooks/pre-commit` staged as executable so the hook also runs on macOS and Linux. The gate runs locally on each commit and reads only the staged files. | the repository |
 
 No telemetry, no other services, nothing stored outside the repository you work on. Privacy policy: [PRIVACY.md](PRIVACY.md).
 
 ## Install
 
-As a plugin:
+As a plugin, from a terminal:
 
 ```
-/plugin marketplace add Sarpes/repo-kickoff
-/plugin install repo-kickoff@repo-kickoff
+claude plugin marketplace add Sarpes/repo-kickoff
+claude plugin install repo-kickoff@repo-kickoff
 ```
+
+Start a new Claude Code session afterwards. Inside a session, `/plugin` opens the plugin manager, where you can add the marketplace `Sarpes/repo-kickoff` and install from it.
 
 Or as a personal skill: copy `skills/repo-kickoff/` to `~/.claude/skills/repo-kickoff/`.
 

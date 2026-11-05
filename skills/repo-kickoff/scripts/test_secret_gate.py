@@ -54,6 +54,18 @@ with tempfile.TemporaryDirectory() as d:
     good = ".githooks/* text eol=lf" in attrs
     fails += not good
     print(f"  {'PASS' if good else 'FAIL'}  .gitattributes keeps hooks LF")
+    # git skips a hook without the execute bit on macOS/Linux. The index mode is what a
+    # clone gets, and it is checkable on Windows too, where the file system has no such bit.
+    staged = subprocess.run(["git", "-C", str(repo), "ls-files", "-s", ".githooks/pre-commit"],
+                            capture_output=True, text=True).stdout
+    good = staged.startswith("100755 ")
+    fails += not good
+    print(f"  {'PASS' if good else 'FAIL'}  pre-commit recorded as executable (100755) in git: {staged.split(' ')[0] or 'not staged'}")
+    if sys.platform != "win32":
+        import os
+        good = os.access(repo / ".githooks" / "pre-commit", os.X_OK)
+        fails += not good
+        print(f"  {'PASS' if good else 'FAIL'}  pre-commit has the execute bit on disk")
 # The gate (installed into repos) and audit_repo.py must look for the same things.
 # Compare the COMPILED patterns: the gate's are built by running the pattern lines of
 # the gate source that install_secret_gate.py writes; audit_repo's by importing it.
