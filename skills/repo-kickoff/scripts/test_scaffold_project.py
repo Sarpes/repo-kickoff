@@ -79,5 +79,24 @@ with tempfile.TemporaryDirectory() as d:
     r = run(["--print-registry-path"], None)
     check("default registry path is the workbench one", r.stdout.strip().endswith("registry" + chr(92) + "projects.yaml"))
 
+with tempfile.TemporaryDirectory() as d:
+    d = Path(d)
+    for quote in ('"', "'"):
+        reg = d / f"q{ord(quote)}.yaml"
+        reg.write_text(f"projects:\n  - id: {quote}taken{quote}\n    status: active\n", encoding="utf-8")
+        before = reg.read_text(encoding="utf-8")
+        r = run([str(d / f"t{ord(quote)}"), "--id", "taken", "--co-author", "claude"], reg)
+        check(f"quoted id ({quote}) counts as duplicate", r.returncode != 0 and not (d / f"t{ord(quote)}").exists())
+        check(f"registry unchanged after quoted duplicate ({quote})", reg.read_text(encoding="utf-8") == before)
+    reg = d / "nokey.yaml"
+    reg.write_text("# only a comment\nother: []\n", encoding="utf-8")
+    r = run([str(d / "nk"), "--id", "nk", "--co-author", "claude"], reg)
+    check("registry without top-level projects: key refused", r.returncode != 0 and not (d / "nk").exists())
+    check("registry without projects: key left unchanged", reg.read_text(encoding="utf-8") == "# only a comment\nother: []\n")
+    reg = d / "indented.yaml"
+    reg.write_text("x:\n  projects:\n    - id: a\n", encoding="utf-8")
+    r = run([str(d / "ik"), "--id", "ik", "--co-author", "claude"], reg)
+    check("indented (nested) projects: key does not count", r.returncode != 0)
+
 print("ALL PASS" if not fails else f"{fails} FAILED")
 sys.exit(1 if fails else 0)

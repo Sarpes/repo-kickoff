@@ -69,7 +69,10 @@ def main(argv=None) -> int:
             print(f"refused: registry file not found: {reg} (set CLAUDE_REGISTRY or use --no-registry)", file=sys.stderr)
             return 2
         text = reg.read_text(encoding="utf-8")
-        if re.search(rf"^\s*-\s*id:\s*{re.escape(a.id)}\s*$", text, re.M):
+        if not re.search(r"^projects:\s*(#.*)?$", text, re.M):
+            print(f"refused: {reg} has no top-level 'projects:' key", file=sys.stderr)
+            return 2
+        if re.search(rf"""^\s*-\s*id:\s*(["']?){re.escape(a.id)}\1\s*(#.*)?$""", text, re.M):
             print(f"refused: id {a.id!r} already in {reg}", file=sys.stderr)
             return 2
 
