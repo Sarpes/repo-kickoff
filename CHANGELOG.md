@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0 · 2026-11-07
+- New script `scaffold_project.py`: creates the project skeleton folders under `docs/` (handovers, architecture, guides, artifacts, archive, each with `.gitkeep`) and appends one entry to a project registry file (`id`, `path`, `status: active`, `co_author`). The registry file comes from the environment variable `CLAUDE_REGISTRY`; `--no-registry` skips it. It never overwrites a file and refuses a duplicate id. Tested in temp directories only (`test_scaffold_project.py`, 23 checks).
+- Kickoff now asks whether commits carry a `Co-Authored-By: Claude` trailer (`co_author`) and records the answer; the README step points to `DECISIONS.md` and timestamped handover files with `Status: OPEN|COMPLETE`.
+
 ## 0.1.9 · 2026-11-06
 - Fix: kickoff step 2 fetched the `.gitignore` template with `gh api /gitignore/templates/Python`; in Git Bash on Windows the leading `/` is rewritten into a Windows path (`invalid API endpoint`), and without a signed-in `gh` the call fails too. Sessions then wrote the file partly from memory. Now: `gh api gitignore/templates/Python`, and if `gh` fails, the same public file from `raw.githubusercontent.com` with `curl`; never from memory. Measured in test sessions: template match 0.57–0.58 before, 1.0 in 5 of 5 runs after.
 - `SKILL.md` wording: the Windows Store `python3` stub exits 49 (not 0); for public repositories, decision records and status notes go to a private companion repository; audit step 1 mentions the history check.

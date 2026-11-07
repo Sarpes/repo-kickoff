@@ -84,6 +84,7 @@ Tests:
 ```
 python skills/repo-kickoff/scripts/test_audit_repo.py
 python skills/repo-kickoff/scripts/test_secret_gate.py
+python skills/repo-kickoff/scripts/test_scaffold_project.py
 ```
 
 Both build throwaway repos with planted defects and check each one is caught, and that a clean variant raises nothing. `test_secret_gate.py` also checks that the gate and `audit_repo.py` use identical secret patterns.
