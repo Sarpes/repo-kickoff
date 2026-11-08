@@ -242,7 +242,9 @@ with tempfile.TemporaryDirectory() as d:
     # 14. key order, text format
     s = json.loads(r2.stdout)
     check("json: exactly the table keys, in order", list(s.keys()) == KEYS)
-    check("text: one line per key", all(f"{k}:" in r1.stdout for k in KEYS))
+    text_lines = r1.stdout.splitlines()
+    check("text: one key: line per field (warnings use WARNING: lines)",
+          all(any(x.startswith(f"{k}:") for x in text_lines) for k in KEYS if k != "warnings"))
     check("text: commit line format", f"  {short(ro)} pushed " in r1.stdout or f"{short(ro)} pushed " in r1.stdout)
     check("bad argument: exit 2", run(ro, "--nope").returncode == 2)
 
