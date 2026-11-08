@@ -186,6 +186,8 @@ with tempfile.TemporaryDirectory() as d:
     check("detached: branch null", s["branch"] is None)
     check("detached: warning 1", "detached HEAD: commits made here are easy to lose; "
                                  "create a branch first (git switch -c <name>)" in s["warnings"])
+    check("detached: merged_branches has only real branches",
+          not any(b.startswith("(") for b in s["merged_branches"]))
     git(c, "switch", "-q", "main")
 
     # 9. merged and gone branches
@@ -233,11 +235,43 @@ with tempfile.TemporaryDirectory() as d:
     git(ro, "update-ref", "refs/heads/probe", "HEAD")
     check("gate can fail: fingerprint changes on a write", fingerprint(ro) != before)
     git(ro, "update-ref", "-d", "refs/heads/probe")
+    # A tracked, unchanged file with a new mtime makes plain `git status` rewrite .git/index
+    # (stat-cache refresh); only GIT_OPTIONAL_LOCKS=0 prevents that.
+    tracked = ro / "two.txt"
+    t_new = tracked.stat().st_mtime + 5
+    os.utime(tracked, (t_new, t_new))
     before = fingerprint(ro)
     r1 = run(ro)
     r2 = run(ro, "--json")
     check("gate: script ran (text and json)", r1.returncode == 0 and r2.returncode == 0)
     check("gate: .git unchanged without --fetch", fingerprint(ro) == before)
+    git(ro, "status", "--porcelain")
+    check("gate is sensitive: plain git status rewrites .git here", fingerprint(ro) != before)
+
+    # escaping of repository-supplied strings in text output
+    x = d / "x"
+    git(d, "clone", "-q", str(bare), "x")
+    commit_file(x, "esc.txt", "e\n", "evil\x1b[31m subject")
+    sx = report(x)
+    check("escape: json keeps the exact subject", sx["commits"][0]["subject"] == "evil\x1b[31m subject")
+    tx = run(x).stdout
+    check("escape: no raw ESC in text output", "\x1b" not in tx and "evil\\x1b[31m subject" in tx)
+    try:
+        (x / "a\nWARNING: fake").write_text("n\n", encoding="utf-8")
+        newline_name = True
+    except OSError:
+        newline_name = False  # Windows forbids newlines in file names
+    if newline_name:
+        tx = run(x).stdout
+        check("escape: newline in a path cannot forge a WARNING line",
+              not any(ln.startswith("WARNING: fake") for ln in tx.splitlines()))
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("repo_state_mod", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    forged = mod.esc("ok\nWARNING: fake\r\x1b[2J\x7f")
+    check("escape: esc() leaves no control character and no line break",
+          forged == "ok\\nWARNING: fake\\r\\x1b[2J\\x7f" and len(forged.splitlines()) == 1)
 
     # 14. key order, text format
     s = json.loads(r2.stdout)

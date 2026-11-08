@@ -186,7 +186,7 @@ def collect(repo, count):
     merged = []
     if default:
         base = default if ref_exists(repo, f"refs/heads/{default}") else f"origin/{default}"
-        out = git(repo, "branch", "--merged", base, "--format=%(refname:short)")
+        out = git(repo, "for-each-ref", "--merged", base, "--format=%(refname:lstrip=2)", "refs/heads")
         merged = sorted(b for b in lines(out) if b not in (branch, default))
 
     remotes = []
@@ -223,14 +223,24 @@ def collect(repo, count):
     return state
 
 
+CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
+NAMED_ESCAPES = {"\n": "\\n", "\r": "\\r", "\t": "\\t"}
+
+
+def esc(s):
+    """Make a repository-supplied string safe for a terminal or a line-oriented reader:
+    control characters (newline, ESC, ...) become visible \\n, \\r, \\t or \\xNN."""
+    return CONTROL_CHARS.sub(lambda m: NAMED_ESCAPES.get(m.group(), f"\\x{ord(m.group()):02x}"), str(s))
+
+
 def text_value(value):
     if value is None:
         return "-"
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, list):
-        return ", ".join(value) if value else "-"
-    return str(value)
+        return ", ".join(esc(v) for v in value) if value else "-"
+    return esc(value)
 
 
 def render_text(state):
@@ -240,11 +250,11 @@ def render_text(state):
             out.append("commits:" + ("" if value else " -"))
             for c in value:
                 flag = "pushed" if c["pushed"] else "NOT pushed"
-                out.append(f"  {c['hash']} {flag} {c['subject']}")
+                out.append(f"  {esc(c['hash'])} {flag} {esc(c['subject'])}")
         elif key == "remotes":
-            out.append("remotes: " + (", ".join(f"{r['name']}={r['url']}" for r in value) or "-"))
+            out.append("remotes: " + (", ".join(f"{esc(r['name'])}={esc(r['url'])}" for r in value) or "-"))
         elif key == "warnings":
-            out.extend(f"WARNING: {w}" for w in value)
+            out.extend(f"WARNING: {esc(w)}" for w in value)
         else:
             out.append(f"{key}: {text_value(value)}")
     return "\n".join(out)
