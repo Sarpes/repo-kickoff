@@ -37,6 +37,7 @@ def make_repo(root: Path, dirty: bool):
     if not dirty:
         (root / "worker" / "requirements.txt").write_text("python-docx==1.1.2\nfpdf2==2.8.1\ngoogle-auth==2.40.0\n", encoding="utf-8")
     if not dirty:
+        (root.parent / f"{root.name}-internal").mkdir()   # the private companion next to the repo
         (root / ".python-version").write_text("3.13\n", encoding="utf-8")
         # files the skill itself creates must not be reported as secrets
         (root / ".githooks").mkdir()
@@ -93,9 +94,10 @@ EXPECT_DIRTY = [
     ("unquoted env-style value", "config.py:6  line looks like a secret"),
     ("secret line only in git history", "HIST  old_settings.py:1"),
     ("secret file name only in git history", "HIST  backup.env"),
+    ("no private companion next to the repo", "CMP  repo  no private companion folder dirty-internal"),
 ]
 FORBID_CLEAN = ["config.py:1", "looks like a secret", "lists `", "but the file has", "`pytest`", "no Python version",
-                "`call_pipeline`", "HIST"]
+                "`call_pipeline`", "HIST", "CMP"]
 
 fails = 0
 with tempfile.TemporaryDirectory() as d:
@@ -125,5 +127,16 @@ with tempfile.TemporaryDirectory() as d:
     if code != 0:
         fails += 1
         print("  FAIL  exit code should be 0\n" + out)
+    # a companion repo itself needs no companion of its own
+    comp = Path(d, "notes-internal")
+    comp.mkdir()
+    (comp / "README.md").write_text("# Notes\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(comp), "init", "-q"], check=True)
+    subprocess.run(["git", "-C", str(comp), "add", "README.md"], check=True)
+    subprocess.run(["git", "-C", str(comp), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"], check=True)
+    code, out = audit(comp)
+    ok = "CMP" not in out
+    fails += not ok
+    print(f"  {'PASS' if ok else 'FAIL'}  a *-internal repo is not asked for a companion")
 print(f"{'ALL PASS' if not fails else f'{fails} FAILED'}")
 sys.exit(1 if fails else 0)

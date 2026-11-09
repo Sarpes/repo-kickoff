@@ -98,5 +98,46 @@ with tempfile.TemporaryDirectory() as d:
     r = run([str(d / "ik"), "--id", "ik", "--co-author", "claude"], reg)
     check("indented (nested) projects: key does not count", r.returncode != 0)
 
+# Every project gets a private companion <id>-internal next to it: private records (such as the owner's
+# ownership answers) live there and never in the project repo, which may be public.
+with tempfile.TemporaryDirectory() as d:
+    d = Path(d)
+    reg = d / "projects.yaml"
+    reg.write_text("projects:\n", encoding="utf-8")
+    proj, comp = d / "shop-app", d / "shop-app-internal"
+    r = run([str(proj), "--id", "shop-app", "--co-author", "none"], reg)
+    check("companion <id>-internal made next to the project, with ownership/", (comp / "ownership" / ".gitkeep").is_file())
+    text = reg.read_text(encoding="utf-8")
+    check("companion has its own registry entry and path", "- id: shop-app-internal" in text and f"path: '{comp}'" in text)
+    check("companion entry carries the same co_author", text.count("co_author: none") == 2)
+    check("output names the companion", "shop-app-internal" in r.stdout)
+
+    r = run([str(d / "lib-internal"), "--id", "lib-internal", "--co-author", "claude"], reg)
+    check("a project that is itself a companion gets no companion",
+          r.returncode == 0 and not (d / "lib-internal-internal").exists())
+
+    taken = d / "taken.yaml"
+    taken.write_text("projects:\n  - id: web-internal\n", encoding="utf-8")
+    r = run([str(d / "web"), "--id", "web", "--co-author", "claude"], taken)
+    check("companion id already registered: refused before anything is made",
+          r.returncode != 0 and not (d / "web").exists() and not (d / "web-internal").exists())
+
+    old = d / "old.yaml"
+    old.write_text(f"projects:\n  - id: old-app\n    path: '{d / 'old-app'}'\n", encoding="utf-8")
+    (d / "old-app").mkdir()
+    r = run([str(d / "old-app"), "--id", "old-app", "--co-author", "claude", "--internal-only"], old)
+    text = old.read_text(encoding="utf-8")
+    check("--internal-only adds the companion to an existing project",
+          r.returncode == 0 and (d / "old-app-internal" / "ownership" / ".gitkeep").is_file())
+    check("--internal-only adds only the companion's registry entry",
+          "- id: old-app-internal" in text and text.count("- id: old-app\n") == 1)
+    check("--internal-only leaves the project folder alone", not (d / "old-app" / "docs").exists())
+    r = run([str(d / "ghost"), "--id", "ghost", "--co-author", "claude", "--internal-only"], old)
+    check("--internal-only refused for a project missing from the registry",
+          r.returncode != 0 and not (d / "ghost-internal").exists())
+
+    r = run([str(d / "solo"), "--id", "solo", "--co-author", "claude", "--no-registry"], None)
+    check("--no-registry still makes the companion folder", (d / "solo-internal" / "ownership" / ".gitkeep").is_file())
+
 print("ALL PASS" if not fails else f"{fails} FAILED")
 sys.exit(1 if fails else 0)
