@@ -1,6 +1,6 @@
 # Undo: pick the row, then follow SKILL.md › Undo
 
-Every row assumes `repo_state.py --fetch` ran first. "Backup" means `git branch backup/<YYYYMMDD-HHMM>-<short-hash>` before the command; "stash" means offering `git stash push -u -m backup` before it. Run nothing without the user's OK.
+Every row assumes `repo_state.py --fetch` ran first. "Backup" means `git branch backup/<YYYYMMDD-HHMM>-<short-hash>` before the command; "stash" means offering `git stash push -u -m backup` immediately followed by `git stash apply` before it (the stash keeps a copy of all uncommitted and untracked work; the apply puts the working tree back, so the command below still acts on the files meant). Run nothing without the user's OK.
 
 ## Uncommitted work
 
@@ -9,7 +9,7 @@ Every row assumes `repo_state.py --fetch` ran first. "Backup" means `git branch 
 | Throw away edits in one file | stash, then `git restore <file>` | The file's uncommitted edits |
 | Unstage a file, keep the edits | `git restore --staged <file>` | Nothing |
 | Edits made on the wrong branch, not committed | `git stash push -m move`, `git switch <right>`, `git stash pop` | Nothing; on a conflict, resolve it and the stash stays until `git stash drop` |
-| Remove untracked files | `git clean -n` to list them, then `git clean -f <path>` | Those files, permanently; git never had them |
+| Remove untracked files | stash, `git clean -n -d` to list them, then `git clean -f -d <path>` | Those files, permanently; git never had them |
 
 ## Commits that are NOT pushed
 

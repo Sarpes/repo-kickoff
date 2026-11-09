@@ -1,6 +1,6 @@
 ---
 name: repo-kickoff
-description: Use when starting a new code project or repository, when asked to write or check a repo's README, requirements, .gitignore, Python version or other setup files, or to audit whether a repo's docs match its code; also when asked to run a task through the git routine (start a task branch, commit, open a pull request, sync after a merge) or to undo a git mistake (undo a commit, unstage, recover lost work, a pushed secret). Triggers include "new project", "set up the repo", "yeni proje", "repo kur", "README yaz", "requirements", "gitignore", "repoyu denetle", "start a task", "open a PR", "PR aç", "undo", "geri al", "commit'i geri al", "I pushed a secret". Not for a single commit the user did not ask to run through the routine.
+description: Use when starting a new code project or repository, when asked to write or check a repo's README, requirements, .gitignore, Python version or other setup files, or to audit whether a repo's docs match its code; also when asked to run a task through the git routine (start a task branch, open a pull request, sync after a merge) or to undo a git mistake (undo a commit, unstage, recover lost work, a pushed secret). Triggers include "new project", "set up the repo", "yeni proje", "repo kur", "README yaz", "requirements", "gitignore", "repoyu denetle", "start a task", "open a PR", "PR aç", "undo a commit", "git undo", "geri al", "commit'i geri al", "I pushed a secret". Not for routine commits in an established repo unless the user asks for the task routine.
 ---
 
 # repo-kickoff
@@ -40,7 +40,7 @@ One task, from branch to merged pull request. The project's own rules (its `CLAU
 
 | # | Step | Command / check |
 |---|---|---|
-| 1 | State first | `python scripts/repo_state.py <repo> --fetch`. If `operation` is set or `conflicted` is not empty, stop and report. |
+| 1 | State first | `python scripts/repo_state.py <repo> --fetch`. If `operation` is set or `conflicted` is not empty, stop and report. Also stop and report if you are on the default branch with `ahead` greater than 0 (unpushed commits there); point to the `undo.md` row "Committed on the default branch instead of a new branch". |
 | 2 | Branch from a fresh default branch | `git switch <default>`, `git pull --ff-only`, `git switch -c <prefix>/<short-name>` with `feat/`, `fix/`, `docs/` or `chore/`. Uncommitted changes come along to the new branch; never commit them on the default branch. One task per branch. |
 | 3 | Commit | Stage by name (`git add <path>`, never `-A` or `.`), read `git diff --staged`, then commit. Subject: what changed, imperative, at most 72 characters. Body: why, the alternative rejected, how it was verified (command and number). Add a `Co-Authored-By` trailer only if the project records `co_author: claude`. If a hook refuses the commit, fix the cause (never `--no-verify`) and run `git status`: a refused commit leaves its files staged. |
 | 4 | Push and open the pull request | `git push -u origin <branch>`, then `gh pr create` with the sections Goal · Choices (with rejected alternatives) · Measurements (before/after, source) · How to check. |
@@ -51,10 +51,10 @@ One task, from branch to merged pull request. The project's own rules (its `CLAU
 
 Diagnose before touching anything: the right fix depends on facts only the repo can tell.
 
-1. `python scripts/repo_state.py <repo> --fetch`. The deciding fact is `pushed` for each commit involved. Never guess it.
+1. `python scripts/repo_state.py <repo> --fetch`. The deciding fact is `pushed` for each commit involved. Never guess it. `pushed: false` means "not on any remote-tracking branch now"; if a remote branch was deleted, its commits may still exist in other people's clones, so ask before rewriting them.
 2. Read `undo.md` and pick the matching row. Not pushed: history may be rewritten. Pushed: add a commit that reverses it; never rewrite shared history.
 3. Tell the user in plain words what happened, the exact command, and what it will discard. Run it only after the user's explicit OK.
-4. Before any command that moves or rewrites history (`reset`, `commit --amend`, `rebase`, `branch -f`, deleting a branch), save the current point: `git branch backup/<YYYYMMDD-HHMM>-<short-hash>`. Before a command that discards uncommitted work (`restore`, `reset --hard`, `clean`), offer `git stash push -u -m backup` first.
+4. Before any command that moves or rewrites history (`reset`, `commit --amend`, `rebase`, `branch -f`, deleting a branch), save the current point: `git branch backup/<YYYYMMDD-HHMM>-<short-hash>`. Before a command that discards uncommitted work (`restore`, `reset --hard`, `clean`), offer a backup first: `git stash push -u -m backup` immediately followed by `git stash apply` (the stash keeps a copy, the working tree stays as it was, so the command then acts on the files you meant).
 5. Run `repo_state.py` again and show that the result is what was promised. Keep the backup branch until the user deletes it.
 
 ## Common mistakes
