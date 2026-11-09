@@ -30,8 +30,13 @@ HOURS_UNTIL_DAYS = 48
 def git(repo, *args):
     """Run git in repo; return stdout without its final newline, or None when git fails."""
     env = dict(os.environ, GIT_OPTIONAL_LOCKS="0")
-    r = subprocess.run(["git", *args], cwd=str(repo), capture_output=True, text=True,
-                       encoding="utf-8", env=env)
+    try:
+        r = subprocess.run(["git", *args], cwd=str(repo), capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", env=env)
+    except FileNotFoundError:
+        print("error: the git executable was not found; install git and put it on PATH",
+              file=sys.stderr)
+        sys.exit(2)
     if r.returncode != 0:
         return None
     return r.stdout[:-1] if r.stdout.endswith("\n") else r.stdout
@@ -121,11 +126,13 @@ def recent_commits(repo, count):
     return commits
 
 
-def last_fetch_time(common_dir):
-    path = common_dir / "FETCH_HEAD"
-    if not path.is_file():
+def last_fetch_time(*git_dirs):
+    """Newest FETCH_HEAD among the given dirs. A linked worktree keeps its own FETCH_HEAD in its
+    git dir while the remote-tracking refs it updates are shared, so either file is evidence."""
+    times = [d / "FETCH_HEAD" for d in git_dirs if (d / "FETCH_HEAD").is_file()]
+    if not times:
         return None
-    return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+    return datetime.fromtimestamp(max(f.stat().st_mtime for f in times), tz=timezone.utc)
 
 
 def age_text(delta):
@@ -194,7 +201,7 @@ def collect(repo, count):
         url = git(repo, "remote", "get-url", name) or ""
         remotes.append({"name": name, "url": strip_credentials(url)})
 
-    fetched_at = last_fetch_time(common_dir)
+    fetched_at = last_fetch_time(git_dir, common_dir)
     state = {
         "repo": str(Path(top)),
         "branch": branch,

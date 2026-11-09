@@ -248,6 +248,38 @@ with tempfile.TemporaryDirectory() as d:
     git(ro, "status", "--porcelain")
     check("gate is sensitive: plain git status rewrites .git here", fingerprint(ro) != before)
 
+    # linked worktree: git keeps FETCH_HEAD per worktree, so a fetch there must count
+    wm = d / "wmain"
+    git(d, "clone", "-q", str(bare), "wmain")
+    wt = d / "wtree"
+    git(wm, "worktree", "add", "-q", "-b", "wt-branch", str(wt))
+    check("worktree: not fetched yet -> null", report(wt)["last_fetch"] is None)
+    git(wt, "fetch", "-q", "--all")
+    sw = report(wt)
+    check("worktree: last_fetch set after a fetch inside it", sw["last_fetch"] is not None)
+    check("worktree: no 'never fetched' warning", not any("never fetched" in w for w in sw["warnings"]))
+
+    # git output that is not valid UTF-8 must not crash the report
+    ne = d / "nonutf8"
+    git(d, "clone", "-q", str(bare), "nonutf8")
+    git(ne, "config", "i18n.logOutputEncoding", "latin1")
+    git(ne, "config", "i18n.commitEncoding", "latin1")
+    msg = d / "latin1.txt"
+    msg.write_bytes("caf\u00e9 subject".encode("latin-1"))
+    (ne / "n.txt").write_text("n\n", encoding="utf-8")
+    git(ne, "add", "n.txt")
+    git(ne, "commit", "-q", "-F", str(msg))
+    rn = run(ne, "--json")
+    check("non-UTF-8 git output: exit 0, no traceback", rn.returncode == 0 and "Traceback" not in rn.stderr)
+    check("non-UTF-8 git output: subject kept with a replacement character",
+          rn.returncode == 0 and json.loads(rn.stdout)["commits"][0]["subject"].startswith("caf"))
+
+    # a missing git binary gives a clear message and exit 2
+    nogit = subprocess.run([sys.executable, "-I", str(SCRIPT), str(ne)], capture_output=True, text=True,
+                           encoding="utf-8", env=dict(ENV, PATH=str(d)))
+    check("missing git: exit 2 with a message, no traceback",
+          nogit.returncode == 2 and "git" in nogit.stderr and "Traceback" not in nogit.stderr)
+
     # escaping of repository-supplied strings in text output
     x = d / "x"
     git(d, "clone", "-q", str(bare), "x")
