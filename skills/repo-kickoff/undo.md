@@ -9,7 +9,7 @@ Every row assumes `repo_state.py --fetch` ran first. "Backup" means `git branch 
 | Throw away edits in one file | stash, then `git restore <file>` | The file's uncommitted edits |
 | Unstage a file, keep the edits | `git restore --staged <file>` | Nothing |
 | Edits made on the wrong branch, not committed | `git stash push -m move`, `git switch <right>`, `git stash pop` | Nothing; on a conflict, resolve it and the stash stays until `git stash drop` |
-| Remove untracked files | stash, `git clean -n -d` to list them, then `git clean -f -d <path>` | Those files, permanently; git never had them |
+| Remove untracked files | stash, `git clean -n -d` to list them, then `git clean -f -d <path>` | Those files from the working tree. The stash taken first holds a copy (it includes untracked files) until `git stash drop`; without that stash they are gone for good. |
 
 ## Commits that are NOT pushed
 
