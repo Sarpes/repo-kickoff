@@ -223,5 +223,6 @@ __marimo__/
 !.env.example
 # Scratch space for samples and experiments
 scratch/
-# Claude Code local settings
+# Claude Code local settings and local notes
 .claude/settings.local.json
+CLAUDE.local.md
