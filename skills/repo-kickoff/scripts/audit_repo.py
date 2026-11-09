@@ -10,6 +10,9 @@ Checks
        and contents; tracked files over 5 MB
   HIST secret-looking file names and lines in earlier versions of files and in
        deleted files, anywhere in the git history (still readable by anyone who clones)
+  CMP  the private companion folder <repo-name>-internal next to the repo (private
+       records such as the owner's ownership answers live there, never in the repo);
+       a repo whose name ends in -internal is itself a companion and is not asked
 """
 import ast
 import importlib.metadata as md
@@ -263,6 +266,21 @@ def check_history(repo, files):
     return findings
 
 
+COMPANION_SUFFIX = "-internal"
+
+
+def check_companion(repo):
+    """Every project has a private companion <name>-internal beside it (scaffold_project.py makes one)."""
+    if repo.name.endswith(COMPANION_SUFFIX):
+        return []
+    comp = repo.parent / (repo.name + COMPANION_SUFFIX)
+    if comp.is_dir():
+        return []
+    return [("CMP", "medium", "repo", f"no private companion folder {comp.name} next to the repo; private records "
+             f"(ownership answers) have nowhere to go but this repo. Add it: scaffold_project.py {repo} --id "
+             f"{repo.name} --co-author claude|none --internal-only")]
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if len(args) != 1:
@@ -271,7 +289,7 @@ def main():
     repo = Path(args[0]).resolve()
     files = tracked(repo)
     req, wanted = check_requirements(repo, files)
-    findings = req + check_readme(repo, files) + check_ignore(repo, files) + check_history(repo, files)
+    findings = req + check_readme(repo, files) + check_ignore(repo, files) + check_history(repo, files) + check_companion(repo)
     order = {"high": 0, "medium": 1, "verify": 2, "low": 3, "info": 4}
     findings.sort(key=lambda x: (order[x[1]], x[0], x[2]))
     if "--json" in sys.argv:
