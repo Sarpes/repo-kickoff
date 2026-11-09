@@ -31,7 +31,7 @@ The skill keeps the judgment in text and puts every repeatable check in a tested
 
 ## 2. How Claude picks it up
 
-You do not call it by name. Claude Code shows Claude a one-line description of every installed skill (~106 tokens for this one) and loads the full text (~950 tokens) only when a request matches, for example:
+You do not call it by name. Claude Code shows Claude a one-line description of every installed skill (about 760 characters for this one) and loads the full text (about 9,700 characters) only when a request matches, for example:
 
 - "new project", "set up the repo", "start a repository for …"
 - "audit this repo", "does the README match the code", "check the requirements / .gitignore"
@@ -94,7 +94,7 @@ Undo mode repairs a git mistake. Which repair is right depends on a fact only th
 1. **Diagnose.** `repo_state.py <repo> --fetch` reports, for each recent commit, whether it is **pushed** (contained in any remote-tracking branch). Claude never guesses this.
 2. **Decide by that fact.** A commit that is not pushed exists only on your machine, so its history may be rewritten. A pushed commit may already be in someone else's clone, so history is not rewritten; a new commit that reverses it is added instead. The table of situations and commands is `skills/repo-kickoff/undo.md`.
 3. **Explain, then ask.** Claude states in plain words what happened, the exact command, and what that command discards. It runs the command only after your explicit OK.
-4. **Back up first.** Before a command that moves or rewrites history (`reset`, `commit --amend`, `rebase`, `branch -f`, deleting a branch), Claude saves the current point as a branch `backup/<YYYYMMDD-HHMM>-<short-hash>`. Before a command that discards uncommitted work (`restore`, `reset --hard`, `clean`), it offers `git stash push -u -m backup` first.
+4. **Back up first.** Before a command that moves or rewrites history (`reset`, `commit --amend`, `rebase`, `branch -f`, deleting a branch), Claude saves the current point as a branch `backup/<YYYYMMDD-HHMM>-<short-hash>`. Before a command that discards uncommitted work (`restore`, `reset --hard`, `clean`), it offers a backup first: `git stash push -u -m backup` immediately followed by `git stash apply`, which keeps a copy of everything uncommitted in the stash and leaves your files as they were.
 5. **Check.** It runs the state report again and shows that the result is what it promised. The backup branch stays until you delete it.
 
 Example, the same mistake in two situations: you say *"undo my last commit"*.
@@ -133,7 +133,7 @@ Builds a throwaway repo, installs the gate there, and checks that a commit with 
 Commit `.githooks/` and `.gitattributes`. After cloning the repo anywhere else, run `git config core.hooksPath .githooks` once.
 
 ### `repo_state.py <repo> [--json] [--fetch] [--commits N]`
-Reports facts about a git repository: current branch and default branch, upstream with ahead and behind counts, when it was last fetched, an interrupted merge or rebase, conflicted, staged, unstaged and untracked files, the stash count, the configured remotes (credentials stripped from their URLs), and the last N commits (default 10), each marked pushed or not. `--json` prints exact values; the text output escapes control characters in text taken from the repository. It never changes anything unless you pass `--fetch`, which runs `git fetch --all --prune --quiet` and so contacts the repository's own remotes and updates its remote-tracking branches. Without `--fetch` it reads only the local repository and leaves `.git` byte-identical. Exit code 2 if the folder is not a git repository or an argument is bad.
+Reports facts about a git repository: current branch and default branch, upstream with ahead and behind counts, when it was last fetched, an interrupted merge or rebase, conflicted, staged, unstaged and untracked files, the stash count, the configured remotes (credentials stripped from their URLs), and the last N commits (default 10), each marked pushed or not. `--json` prints exact values; the text output escapes control characters in text taken from the repository. It never changes anything unless you pass `--fetch`, which runs `git fetch --all --prune --quiet` and so contacts the repository's own remotes and updates its remote-tracking branches (with `--prune` it also removes remote-tracking branches whose branch was deleted on the remote). Without `--fetch` it reads only the local repository and leaves `.git` byte-identical. Exit code 2 if the folder is not a git repository or an argument is bad.
 
 ### Tests
 `test_audit_repo.py` and `test_secret_gate.py` build throwaway repositories with planted defects and check that each is caught and that a clean variant raises nothing. `test_secret_gate.py` also checks that the gate and `audit_repo.py` use identical secret patterns. `test_repo_state.py` checks the report against throwaway repositories (clean, dirty, conflicted, pushed and unpushed commits) and that `.git` is byte-identical before and after a run without `--fetch`.
