@@ -4,15 +4,15 @@
     "name": "Sarp Esenyel"
   },
   "metadata": {
-    "description": "A Claude Code skill for starting and auditing repositories",
-    "version": "0.2.0"
+    "description": "A Claude Code skill for starting and auditing repositories, running the daily branch-to-pull-request routine, and undoing git mistakes safely",
+    "version": "0.3.0"
   },
   "plugins": [
     {
       "name": "repo-kickoff",
       "source": "./",
-      "description": "Start a new repository, locally and on GitHub, whose setup can be reproduced and checked, with a pre-commit gate that blocks common API keys and passwords; audit an existing repo's README, requirements, .gitignore and committed secrets.",
-      "version": "0.2.0",
+      "description": "Start a new repository, locally and as a private GitHub repo, whose setup can be reproduced and checked, with a pre-commit gate that blocks common API keys and passwords; audit an existing repo's README, requirements, .gitignore and committed secrets; carry a task from branch to merged pull request (Daily mode); diagnose and undo git mistakes after your OK (Undo mode).",
+      "version": "0.3.0",
       "author": {
         "name": "Sarp Esenyel"
       },

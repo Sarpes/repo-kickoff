@@ -13,7 +13,7 @@ This repo is PUBLIC. Internal documents (status handovers, decision records with
 | `docs/GUIDE.md` | The user guide. |
 
 ## Commands
-- Tests: `python skills/repo-kickoff/scripts/test_audit_repo.py`, `python skills/repo-kickoff/scripts/test_secret_gate.py` and `python skills/repo-kickoff/scripts/test_scaffold_project.py`. All must print ALL PASS (the scaffold test only uses temp dirs and a temp `CLAUDE_REGISTRY`).
+- Tests: `python skills/repo-kickoff/scripts/test_audit_repo.py`, `python skills/repo-kickoff/scripts/test_secret_gate.py`, `python skills/repo-kickoff/scripts/test_scaffold_project.py` and `python skills/repo-kickoff/scripts/test_repo_state.py`. All must print ALL PASS (the scaffold and repo_state tests only use temp dirs; the scaffold test also uses a temp `CLAUDE_REGISTRY`).
 - Audit this repo: `python skills/repo-kickoff/scripts/audit_repo.py .` → 0 high, 0 medium.
 - After a clone: `git config core.hooksPath .githooks` (the secret gate).
 

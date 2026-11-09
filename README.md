@@ -2,14 +2,16 @@
 
 ![repo-kickoff](assets/logo.png)
 
-A [Claude Code](https://code.claude.com) skill that sets up new repositories properly and checks existing ones. A **skill** is a set of instructions plus small scripts that Claude loads only when a request needs them; you do not call it by name.
+A [Claude Code](https://code.claude.com) skill that sets up new repositories properly, checks existing ones, and carries everyday git work through the same routine. A **skill** is a set of instructions plus small scripts that Claude loads only when a request needs them; you do not call it by name.
 
-It has two modes:
+It has four modes:
 
 | Mode | You say | You get |
 |---|---|---|
 | **Kickoff** | "new project", "set up the repo", "yeni proje" | A git repository with a `main` branch, GitHub's `.gitignore` template, dependencies pinned to the exact versions your tests passed with, the Python version written down, a check that refuses commits containing API keys or passwords, a README, and (if you agree) a private GitHub repository with a pull request. |
 | **Audit** | "audit this repo", "does the README match the code", "repoyu denetle" | A read-only report: imports missing from `requirements.txt`, no stated Python version, README references to files or lines that do not exist, files tracked although `.gitignore` ignores them, secrets already committed. Nothing is changed. |
+| **Daily** | "start a task", "open a PR", "PR aç" | One task carried from a branch off a fresh default branch to a merged pull request: a commit with a message body, a push, a pull request with Goal, Choices, Measurements and How to check, a merge only after you say OK, then a sync. Deleting the merged branch is offered, never done unasked. |
+| **Undo** | "undo the last commit", "geri al", "I pushed a secret" | A diagnosis first (what is committed, what is already pushed), then the matching fix explained in plain words, including what it discards. Nothing runs until you say OK; a backup branch is saved before any command that rewrites history, and a stash copy (`git stash push -u` followed by `git stash apply`, which leaves your files in place) is offered before uncommitted work is discarded. A pushed commit is reversed with a new commit, not rewritten. |
 
 It is written for Python projects; the git, `.gitignore`, secret-check and README parts work for any language.
 
@@ -34,6 +36,8 @@ Update: `claude plugin marketplace update repo-kickoff`, then `claude plugin upd
 
 - **Audit**: open Claude Code in one of your existing repositories and say *"audit this repo"*. You get findings by severity (`high`, `medium`: fix before pushing; `verify`: a README line Claude opens and compares; `low`, `info`), each with a file and line.
 - **Kickoff**: in an empty folder, say *"new project: a script that …"*. Claude first confirms the project name and folder with you, then works through the steps. The last step creates a **private** GitHub repository and pushes to it. Claude Code shows each command for your permission unless you have allowed it in advance; if you do not want GitHub, say so in your request (*"no GitHub"*).
+- **Daily**: in a repository you work on, say *"start a task: fix the typo in the README"*. Claude checks the repository's state, branches from an up-to-date default branch, commits, pushes and opens the pull request, then shows it to you; it merges only after your OK.
+- **Undo**: say *"undo my last commit"*. Claude first reports whether that commit is already pushed, then proposes the fix and waits for your OK.
 
 ## Feedback
 
@@ -57,14 +61,15 @@ In audit mode, one of two sessions without the skill sampled the README's 29 `fi
 
 ## What it runs, fetches and sends
 
-Everything below happens on your machine, with your own tools and credentials, and only when you ask for a kickoff or an audit.
+Everything below happens on your machine, with your own tools and credentials, and only when you ask for one of the four modes.
 
 | | What | Where |
 |---|---|---|
 | **Runs** | `git` (init, commit, branch, push) and the Python scripts in `skills/repo-kickoff/scripts/`. The scripts use only Python's standard library, call no program but `git`, and contain no network code. | your machine |
 | **Reads** | The files of the repository you point it at and, in audit mode, their earlier versions in its git history, and (for `pin_requirements.py`) the installed-package list of the Python you run it with. It does not read your environment variables or credential files; it looks for credential-shaped file names and lines only to warn about them, and prints file names and line numbers, never values. | your machine |
 | **Fetches** | GitHub's official `.gitignore` template (kickoff step 2), through `gh api gitignore/templates/<Language>` with your own `gh` login, or, if `gh` is missing or not signed in, the same public file from `raw.githubusercontent.com/github/gitignore` with `curl` (no login). | GitHub |
-| **Sends** | Only in kickoff step 8, through commands Claude Code shows for your permission unless you allowed them in advance (say *"no GitHub"* to skip the step): `gh repo create` makes a **private** repository under the owner you choose, and `git push` uploads your project to it, with your own credentials. Audit mode sends nothing. | GitHub |
+| **Fetches from your remotes** | `repo_state.py --fetch` (used by Daily and Undo) runs `git fetch --all --prune --quiet`, which contacts the remotes already configured in that repository, with your own credentials, and updates its remote-tracking branches (with `--prune` it also removes remote-tracking branches whose branch was deleted on the remote). Without `--fetch`, `repo_state.py` reads only the local repository and changes nothing. | the repository's own remotes |
+| **Sends** | Only in kickoff step 8 and when Daily or Undo push, through commands Claude Code shows for your permission unless you allowed them in advance (say *"no GitHub"* to skip the kickoff step): `gh repo create` makes a **private** repository under the owner you choose, `git push` uploads your commits to it, and `gh pr create` opens a pull request, with your own credentials. Audit mode sends nothing. | GitHub |
 | **Installs** | Into the new repository only: `.githooks/pre-commit` and `.githooks/secret_gate.py`, `git config core.hooksPath .githooks`, one `.gitattributes` line, and `.githooks/pre-commit` staged as executable so the hook also runs on macOS and Linux. The gate runs locally on each commit and reads only the staged files. | the repository |
 
 No telemetry, no other services, nothing stored outside the repository you work on. Privacy policy: [PRIVACY.md](PRIVACY.md).
@@ -78,6 +83,7 @@ The skill calls these, and they also run without Claude (Python 3.11+, standard 
 | `skills/repo-kickoff/scripts/audit_repo.py <repo>` | Read-only audit: imports vs requirements, Python version, README `file:line` references, ignored-but-tracked files, secrets in the current files and in the git history. Exit 1 on high/medium findings. |
 | `skills/repo-kickoff/scripts/pin_requirements.py <repo> [--write]` | Run with the project's venv interpreter: writes `requirements.txt` / `requirements-dev.txt` with `==` pins and `.python-version`. |
 | `skills/repo-kickoff/scripts/install_secret_gate.py <repo>` | Proves the pre-commit secret gate on a throwaway repo, then installs it (`.githooks/`, `core.hooksPath`, LF line endings via `.gitattributes`). |
+| `skills/repo-kickoff/scripts/repo_state.py [repo] [--json] [--fetch] [--commits N]` | Read-only report on a git repository: branch and upstream, ahead/behind, interrupted merge or rebase, conflicted/staged/unstaged/untracked files, stash count, and the recent commits with whether each is already pushed. Remote URLs are printed without credentials. Only `--fetch` contacts the remotes and updates their tracking branches. Exit 2 if the folder is not a repository. |
 
 Tests:
 
@@ -85,9 +91,10 @@ Tests:
 python skills/repo-kickoff/scripts/test_audit_repo.py
 python skills/repo-kickoff/scripts/test_secret_gate.py
 python skills/repo-kickoff/scripts/test_scaffold_project.py
+python skills/repo-kickoff/scripts/test_repo_state.py
 ```
 
-Both build throwaway repos with planted defects and check each one is caught, and that a clean variant raises nothing. `test_secret_gate.py` also checks that the gate and `audit_repo.py` use identical secret patterns.
+`test_audit_repo.py` and `test_secret_gate.py` build throwaway repos with planted defects and check each one is caught, and that a clean variant raises nothing; `test_repo_state.py` checks the report against throwaway repositories and that the script leaves `.git` unchanged. `test_secret_gate.py` also checks that the gate and `audit_repo.py` use identical secret patterns.
 
 Contributing: after cloning this repository, run `git config core.hooksPath .githooks` once, so its own secret gate checks your commits. Git does not turn hooks on by itself after a clone.
 

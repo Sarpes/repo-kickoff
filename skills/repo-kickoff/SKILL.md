@@ -1,11 +1,11 @@
 ---
 name: repo-kickoff
-description: Use when starting a new code project or repository, or when asked to write or check a repo's README, requirements, .gitignore, Python version or other setup files, or to audit whether a repo's docs match its code. Triggers include "new project", "set up the repo", "yeni proje", "repo kur", "README yaz", "requirements", "gitignore", "repoyu denetle". Not for routine commits in an established repo.
+description: Use when starting a new code project or repository, when asked to write or check a repo's README, requirements, .gitignore, Python version or other setup files, or to audit whether a repo's docs match its code; also when asked to run a task through the git routine (start a task branch, open a pull request, sync after a merge) or to undo a git mistake (undo a commit, unstage, recover lost work, a pushed secret). Triggers include "new project", "set up the repo", "yeni proje", "repo kur", "README yaz", "requirements", "gitignore", "repoyu denetle", "start a task", "open a PR", "PR aç", "undo a commit", "git undo", "geri al", "commit'i geri al", "I pushed a secret". Not for routine commits in an established repo unless the user asks for the task routine.
 ---
 
 # repo-kickoff
 
-Two modes. **Kickoff** builds a new repo whose setup can be reproduced and checked. **Audit** checks an existing repo, read-only. Deterministic steps are scripts in `scripts/` (run with `python <path>`); this file holds the order and the judgment.
+Four modes. **Kickoff** builds a new repo whose setup can be reproduced and checked. **Audit** checks an existing repo, read-only. **Daily** carries one task from a branch to a merged pull request. **Undo** diagnoses a git mistake and repairs it after the user's OK. Deterministic steps are scripts in `scripts/` (run with `python <path>`); this file holds the order and the judgment.
 
 ## Kickoff
 
@@ -34,6 +34,29 @@ Confirm the project name (lowercase kebab-case ASCII) and root folder with the u
    - Behaviour the README claims has code behind it (grep for it); absolute paths are documented.
 4. Report findings ordered by severity, each with `file:line` or command output. State what you did not check. Change nothing.
 
+## Daily
+
+One task, from branch to merged pull request. The project's own rules (its `CLAUDE.md`) override these defaults.
+
+| # | Step | Command / check |
+|---|---|---|
+| 1 | State first | `python scripts/repo_state.py <repo> --fetch`. If `operation` is set or `conflicted` is not empty, stop and report. Also stop and report if you are on the default branch with `ahead` greater than 0 (unpushed commits there); point to the `undo.md` row "Committed on the default branch instead of a new branch". |
+| 2 | Branch from a fresh default branch | `git switch <default>`, `git pull --ff-only`, `git switch -c <prefix>/<short-name>` with `feat/`, `fix/`, `docs/` or `chore/`. Uncommitted changes come along to the new branch; never commit them on the default branch. One task per branch. |
+| 3 | Commit | Stage by name (`git add <path>`, never `-A` or `.`), read `git diff --staged`, then commit. Subject: what changed, imperative, at most 72 characters. Body: why, the alternative rejected, how it was verified (command and number). Add a `Co-Authored-By` trailer only if the project records `co_author: claude`. If a hook refuses the commit, fix the cause (never `--no-verify`) and run `git status`: a refused commit leaves its files staged. |
+| 4 | Push and open the pull request | `git push -u origin <branch>`, then `gh pr create` with the sections Goal · Choices (with rejected alternatives) · Measurements (before/after, source) · How to check. |
+| 5 | Merge only on the user's OK | Show the pull request: what changed, why, how it was verified. Wait for the OK, then `gh pr merge <n> --merge` (a merge commit keeps hashes cited in docs valid). |
+| 6 | Sync | `git switch <default>`, `git pull --ff-only`, `repo_state.py` again. Offer to delete the merged branch, locally and on the remote; delete nothing without the user's OK. If `remotes` lists a second copy of this repo, say that it needs its own push (`git push <remote> <default>`). |
+
+## Undo
+
+Diagnose before touching anything: the right fix depends on facts only the repo can tell.
+
+1. `python scripts/repo_state.py <repo> --fetch`. The deciding fact is `pushed` for each commit involved. Never guess it. `pushed: false` means "not on any remote-tracking branch now"; if a remote branch was deleted, its commits may still exist in other people's clones, so ask before rewriting them.
+2. Read `undo.md` and pick the matching row. Not pushed: history may be rewritten. Pushed: add a commit that reverses it; never rewrite shared history.
+3. Tell the user in plain words what happened, the exact command, and what it will discard. Run it only after the user's explicit OK.
+4. Before any command that moves or rewrites history (`reset`, `commit --amend`, `rebase`, `branch -f`, deleting a branch), save the current point: `git branch backup/<YYYYMMDD-HHMM>-<short-hash>`. Before a command that discards uncommitted work (`restore`, `reset --hard`, `clean`), offer a backup first: `git stash push -u -m backup` immediately followed by `git stash apply` (the stash keeps a copy, the working tree stays as it was, so the command then acts on the files you meant).
+5. Run `repo_state.py` again and show that the result is what was promised. Keep the backup branch until the user deletes it.
+
 ## Common mistakes
 
 | Mistake | Fix |
@@ -44,3 +67,6 @@ Confirm the project name (lowercase kebab-case ASCII) and root folder with the u
 | Hook trusts `python3`; on Windows it can be the Store stub, which runs nothing (exit 49) | The installed hook checks a printed marker and fails closed |
 | Sampling README references | Check all `verify` lines |
 | Flagging documented absences as bugs | A README "not in this repo" note makes a missing file intentional |
+| Guessing whether a commit was pushed | `repo_state.py` reports `pushed` for each commit |
+| `git push --force` to fix a pushed mistake | `git revert`; force only the user's own unshared branch, with `--force-with-lease`, after OK |
+| Deleting a merged branch unasked | Offer it; delete only on OK |

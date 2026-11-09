@@ -1,11 +1,13 @@
 # repo-kickoff · User guide
 
-repo-kickoff is a **skill** for [Claude Code](https://code.claude.com): a set of instructions plus small scripts that Claude loads only when a task needs them. It does two jobs:
+repo-kickoff is a **skill** for [Claude Code](https://code.claude.com): a set of instructions plus small scripts that Claude loads only when a task needs them. It has four modes:
 
 | Mode | Use it when | Changes files? |
 |---|---|---|
 | **Kickoff** | starting a new project or repository | yes: creates the repo and its setup files |
 | **Audit** | checking an existing repo's README, requirements and `.gitignore` against its code | no: read-only, produces a report |
+| **Daily** | carrying one task from a branch to a merged pull request | yes: branches, commits, pushes; merges only after your OK |
+| **Undo** | repairing a git mistake (a wrong commit, lost work, a pushed secret) | only after your OK for the exact command, with a backup first |
 
 It is written for Python projects; the git, `.gitignore`, secret-gate and README parts work for any language.
 
@@ -29,13 +31,14 @@ The skill keeps the judgment in text and puts every repeatable check in a tested
 
 ## 2. How Claude picks it up
 
-You do not call it by name. Claude Code shows Claude a one-line description of every installed skill (~106 tokens for this one) and loads the full text (~950 tokens) only when a request matches, for example:
+You do not call it by name. Claude Code shows Claude a one-line description of every installed skill (about 760 characters for this one) and loads the full text (about 9,700 characters) only when a request matches, for example:
 
 - "new project", "set up the repo", "start a repository for …"
 - "audit this repo", "does the README match the code", "check the requirements / .gitignore"
-- Turkish: "yeni proje", "repo kur", "README yaz", "repoyu denetle"
+- "start a task", "open a PR", "undo my last commit", "I pushed a secret"
+- Turkish: "yeni proje", "repo kur", "README yaz", "repoyu denetle", "PR aç", "geri al"
 
-It is not meant for routine commits in a repository that is already set up.
+It is not meant for a single commit you did not ask to run through the routine.
 
 ---
 
@@ -69,6 +72,38 @@ Claude first confirms the project's **name and folder** with you, then follows t
 
 ---
 
+## 4a. Daily mode
+
+Daily mode carries one task from a branch to a merged pull request. If the project's own `CLAUDE.md` sets different rules (branch names, commit trailer), those win.
+
+1. **Look at the state first.** Claude runs `repo_state.py <repo> --fetch` (see §5). If a merge or rebase is half done, or files are in conflict, it stops and tells you instead of starting a task on top.
+2. **Branch from a fresh default branch.** It switches to the default branch (usually `main`), pulls with `--ff-only` (fast-forward only: it refuses rather than create a merge), and opens a branch named `feat/`, `fix/`, `docs/` or `chore/` plus a short name. Changes you already made carry over to the new branch; they are never committed on the default branch. One task per branch.
+3. **Commit.** Files are staged by name, never with `git add -A`, and Claude reads the staged diff before committing. The subject says what changed (imperative, at most 72 characters); the body says why, which alternative was rejected and how it was verified. If a pre-commit hook refuses the commit, Claude fixes the cause and checks `git status`, because a refused commit leaves its files staged. It never uses `--no-verify`.
+4. **Push and open the pull request.** `git push -u origin <branch>`, then `gh pr create` with four sections: Goal, Choices (with rejected alternatives), Measurements (before and after, with the source) and How to check.
+5. **Merge only on your OK.** Claude shows you what changed, why and how it was verified, and waits. It then merges with a merge commit, which keeps commit hashes quoted in documents valid.
+6. **Sync.** It switches back to the default branch, pulls, and runs `repo_state.py` again. It then offers to delete the merged branch, locally and on the remote; it deletes nothing unless you say yes. If the repository has a second remote (a mirror), Claude tells you that copy needs its own push.
+
+Example: you say *"fix the typo in the README"*. Claude runs the state report (clean, on `main`, up to date), creates `docs/readme-typo`, changes the one word, stages `README.md`, reads the diff and commits with the subject `Fix typo in README install section` and a body explaining why. It pushes, opens a pull request, and shows you the four sections. After your OK it merges, returns to `main`, pulls, and asks whether to delete `docs/readme-typo`.
+
+---
+
+## 4b. Undo mode
+
+Undo mode repairs a git mistake. Which repair is right depends on a fact only the repository can tell, so Claude measures first and changes nothing until you agree.
+
+1. **Diagnose.** `repo_state.py <repo> --fetch` reports, for each recent commit, whether it is **pushed** (contained in any remote-tracking branch). Claude never guesses this.
+2. **Decide by that fact.** A commit that is not pushed exists only on your machine, so its history may be rewritten. A pushed commit may already be in someone else's clone, so history is not rewritten; a new commit that reverses it is added instead. The table of situations and commands is `skills/repo-kickoff/undo.md`.
+3. **Explain, then ask.** Claude states in plain words what happened, the exact command, and what that command discards. It runs the command only after your explicit OK.
+4. **Back up first.** Before a command that moves or rewrites history (`reset`, `commit --amend`, `rebase`, `branch -f`, deleting a branch), Claude saves the current point as a branch `backup/<YYYYMMDD-HHMM>-<short-hash>`. Before a command that discards uncommitted work (`restore`, `reset --hard`, `clean`), it offers a backup first: `git stash push -u -m backup` immediately followed by `git stash apply`, which keeps a copy of everything uncommitted in the stash and leaves your files as they were.
+5. **Check.** It runs the state report again and shows that the result is what it promised. The backup branch stays until you delete it.
+
+Example, the same mistake in two situations: you say *"undo my last commit"*.
+
+- **Not pushed.** The report shows the commit with `pushed: false`. Claude proposes `git reset --soft HEAD~1`: the commit disappears, its changes stay staged, and the old commit remains reachable through the backup branch it creates first. After your OK it runs both commands and shows the new state.
+- **Pushed.** The report shows `pushed: true`. Claude proposes `git revert <hash>` and then a push: history stays as it is, and a new commit undoes the old one. If what was pushed is a secret, Claude tells you first to revoke or rotate the credential, because a revert does not remove it from clones that already exist.
+
+---
+
 ## 5. The scripts
 
 All scripts are in `skills/repo-kickoff/scripts/`, use only Python's standard library and need Python 3.11+.
@@ -97,8 +132,11 @@ Builds a throwaway repo, installs the gate there, and checks that a commit with 
 
 Commit `.githooks/` and `.gitattributes`. After cloning the repo anywhere else, run `git config core.hooksPath .githooks` once.
 
+### `repo_state.py <repo> [--json] [--fetch] [--commits N]`
+Reports facts about a git repository: current branch and default branch, upstream with ahead and behind counts, when it was last fetched, an interrupted merge or rebase, conflicted, staged, unstaged and untracked files, the stash count, the configured remotes (credentials stripped from their URLs), and the last N commits (default 10), each marked pushed or not. `--json` prints exact values; the text output escapes control characters in text taken from the repository. It never changes anything unless you pass `--fetch`, which runs `git fetch --all --prune --quiet` and so contacts the repository's own remotes and updates its remote-tracking branches (with `--prune` it also removes remote-tracking branches whose branch was deleted on the remote). Without `--fetch` it reads only the local repository and leaves `.git` byte-identical. Exit code 2 if the folder is not a git repository or an argument is bad.
+
 ### Tests
-`test_audit_repo.py` and `test_secret_gate.py` build throwaway repositories with planted defects and check that each is caught and that a clean variant raises nothing. `test_secret_gate.py` also checks that the gate and `audit_repo.py` use identical secret patterns.
+`test_audit_repo.py` and `test_secret_gate.py` build throwaway repositories with planted defects and check that each is caught and that a clean variant raises nothing. `test_secret_gate.py` also checks that the gate and `audit_repo.py` use identical secret patterns. `test_repo_state.py` checks the report against throwaway repositories (clean, dirty, conflicted, pushed and unpushed commits) and that `.git` is byte-identical before and after a run without `--fetch`.
 
 ---
 
@@ -171,6 +209,6 @@ Copy the folder `skills/repo-kickoff/` from this repository to `~/.claude/skills
 ## 9. For maintainers
 
 - **Versions:** bump `version` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` with every change users should receive, and add a line to `CHANGELOG.md`. Without a bump, `claude plugin update` keeps users on the old copy.
-- **Checks before a release:** both test files print ALL PASS; `claude plugin validate .` passes; `python skills/repo-kickoff/scripts/audit_repo.py .` reports 0 high and 0 medium.
+- **Checks before a release:** all four test files print ALL PASS; `claude plugin validate .` passes; `python skills/repo-kickoff/scripts/audit_repo.py .` reports 0 high and 0 medium.
 - **Changing `SKILL.md`:** re-run the before/after scenarios (fresh sessions with and without the skill, scored on the criteria in §1); the skill is kept only for behaviour it measurably changes.
 - **Secret patterns** live in two places (`install_secret_gate.py`, `audit_repo.py`); the test fails if they differ.
