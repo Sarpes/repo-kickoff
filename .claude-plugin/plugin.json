@@ -1,14 +1,14 @@
 {
   "name": "repo-kickoff",
-  "description": "Start a new repository, locally and as a private GitHub repo, whose setup can be reproduced and checked (pinned dependencies, Python version, a tested pre-commit gate that blocks common API keys and passwords, main before branches), and audit an existing repo: README and requirements against its code, .gitignore, and secrets already committed.",
-  "version": "0.2.0",
+  "description": "Start a new repository, locally and as a private GitHub repo, whose setup can be reproduced and checked (pinned dependencies, Python version, a tested pre-commit gate that blocks common API keys and passwords, main before branches), and audit an existing repo: README and requirements against its code, .gitignore, and secrets already committed, and two everyday modes: carrying a task from branch to merged pull request, and diagnosing and undoing git mistakes after the user's OK.",
+  "version": "0.3.0",
   "author": {
     "name": "Sarp Esenyel"
   },
   "homepage": "https://github.com/Sarpes/repo-kickoff",
   "repository": "https://github.com/Sarpes/repo-kickoff",
   "license": "MIT",
-  "keywords": ["repository", "github", "git", "setup", "readme", "requirements", "gitignore", "secrets", "api-keys", "audit", "python"],
+  "keywords": ["repository", "github", "git", "setup", "readme", "requirements", "gitignore", "secrets", "api-keys", "audit", "python", "undo", "pull-request"],
   "skills": ["./skills/repo-kickoff"],
   "icon": "./.claude-plugin/icon.png",
   "documentationUrl": "https://github.com/Sarpes/repo-kickoff/blob/main/docs/GUIDE.md",
