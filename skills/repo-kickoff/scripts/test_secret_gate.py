@@ -116,7 +116,8 @@ def load(path, name):
 
 installer = load(INSTALL, "installer_under_test")
 audit = load(INSTALL.with_name("audit_repo.py"), "audit_under_test")
-gate_defs = installer.GATE.split("\ngit = lambda", 1)[0]     # imports + NAME / SAFE_NAME / TEXT / ENV only
+gate_defs = installer.GATE.split("\ndef git(", 1)[0]         # imports + NAME / TEMPLATE / SELF / TEXT / ENV only
+assert "subprocess.run" not in gate_defs, "split marker missed: the gate would run while loading its patterns"
 gate = {}
 exec(gate_defs, gate)
 same = all((gate[g].pattern, gate[g].flags) == (getattr(audit, a).pattern, getattr(audit, a).flags)
