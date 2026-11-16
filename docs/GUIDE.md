@@ -144,7 +144,8 @@ Reports facts about a git repository: current branch and default branch, upstrea
 ## 6. The secret gate in daily use
 
 - **What it blocks:** a commit whose staged files are named like secret files or contain lines that look like credentials. That includes unquoted `.env`-style lines (an upper-case name ending in `API_KEY`, `TOKEN`, `SECRET` or `PASSWORD`, followed by `=` and a value of 16 or more characters) and any file name ending in `.env`. The value itself is never printed.
-- **What it allows:** references to a value kept elsewhere, such as `os.environ["MY_SETTING"]`, `"$MY_SETTING"`, `%MY_SETTING%`; an empty value such as `MY_SETTING=`; files ending in `.example`, `.sample`, `.template`.
+- **What it allows:** references to a value kept elsewhere, such as `os.environ["MY_SETTING"]`, `"$MY_SETTING"`, `%MY_SETTING%`; an empty value such as `MY_SETTING=`; a secret-looking file *name* that ends in `.example`, `.sample` or `.template` (such as `.env.example`). The *contents* of those files are still checked, so a real value pasted into `.env.example` is refused.
+- **What it always checks:** renamed files (under their new name) and files that are not UTF-8 text. If git itself fails while the gate runs, the commit is refused rather than let through.
 - **A deliberate exception** (for example a fake value in a test): end that line with `secret-gate: allow`.
 - **Python on Windows:** the hook does not trust the `python3` command, because the Windows Store placeholder answers to it without running anything. It asks each candidate (`python3`, `python`, `py`) to print a marker and uses the first that does. If none works, the commit is refused rather than let through.
 - **Do not bypass it** with `git commit --no-verify`: fix the finding, or mark a genuine false positive as above.
