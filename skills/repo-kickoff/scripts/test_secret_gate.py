@@ -29,6 +29,13 @@ cases = [  # (file, content, should_commit)
     ("doc.md", 'example: password = "changeme123"  # secret-gate: allow\n', True),  # secret-gate: allow
     ("test_secret_helpers.py", "def check():\n    return True\n", True),  # "secret" in a .py name is not a secrets file
     (".env.example", "A=\n", True),
+    # A template name exempts the file from the NAME check only, never from the content scan.
+    ("app.env.example", "EXAMPLE_API_KEY=" + FAKE_VAL + "\n", False),
+    ("settings.sample", f'API_KEY = "{FAKE}"\n', False),
+    # Only the gate at the repo root is exempt, not a copy with the same name in a subfolder.
+    ("sub/.githooks/secret_gate.py", f'API_KEY = "{FAKE}"\n', False),
+    # A file that is not valid UTF-8 is still scanned (cp1252 e-acute, then a token).
+    ("legacy_cp1252.py", b"# caf\xe9\nAPI_KEY = \"" + FAKE.encode() + b"\"\n", False),
 ]
 fails = 0
 with tempfile.TemporaryDirectory() as d:
@@ -39,10 +46,14 @@ with tempfile.TemporaryDirectory() as d:
     if r.returncode != 0:
         print(r.stderr)
         sys.exit(1)
+    g = lambda *a: subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t", *a],
+                                  capture_output=True, text=True)
     for name, content, should in cases:
-        (repo / name).write_text(content, encoding="utf-8")
-        g = lambda *a: subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t", *a],
-                                      capture_output=True, text=True)
+        (repo / name).parent.mkdir(parents=True, exist_ok=True)
+        if isinstance(content, bytes):
+            (repo / name).write_bytes(content)
+        else:
+            (repo / name).write_text(content, encoding="utf-8")
         g("add", "-f", name)
         ok = g("commit", "-qm", name).returncode == 0
         if not ok:
@@ -50,6 +61,29 @@ with tempfile.TemporaryDirectory() as d:
         good = ok == should
         fails += not good
         print(f"  {'PASS' if good else 'FAIL'}  {name}: {'committed' if ok else 'refused'} (expected {'commit' if should else 'refuse'})")
+    # A renamed file whose new version adds a secret: git reports it as R (rename), not A or M.
+    body = "".join(f"line_{i} = {i}\n" for i in range(30))
+    (repo / "before_rename.py").write_text(body, encoding="utf-8")
+    g("add", "before_rename.py")
+    base_ok = g("commit", "-qm", "before_rename").returncode == 0
+    g("mv", "before_rename.py", "after_rename.py")
+    (repo / "after_rename.py").write_text(body + f'API_KEY = "{FAKE}"\n', encoding="utf-8")
+    g("add", "after_rename.py")
+    status = g("diff", "--cached", "--name-status").stdout.split()
+    renamed_ok = g("commit", "-qm", "rename with secret").returncode == 0
+    if renamed_ok:
+        g("reset", "-q", "--soft", "HEAD~1")
+    good = base_ok and status[:1] and status[0].startswith("R") and not renamed_ok
+    fails += not good
+    print(f"  {'PASS' if good else 'FAIL'}  renamed file with a secret: {'committed' if renamed_ok else 'refused'}"
+          f" (expected refuse; staged as {status[0] if status else '?'})")
+    # Fail closed: if git cannot list the staged files (here: not inside a repository), refuse.
+    with tempfile.TemporaryDirectory() as outside:
+        r = subprocess.run([sys.executable, str(repo / ".githooks" / "secret_gate.py")], cwd=outside,
+                           capture_output=True, text=True)
+    good = r.returncode != 0
+    fails += not good
+    print(f"  {'PASS' if good else 'FAIL'}  gate refuses when git fails (exit {r.returncode}, expected non-zero)")
     attrs = (repo / ".gitattributes").read_text(encoding="utf-8")
     good = ".githooks/* text eol=lf" in attrs
     fails += not good
