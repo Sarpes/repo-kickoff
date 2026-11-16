@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1 · 2026-11-17
+- Fix: the secret gate let some secrets through without a word. A file whose name ends in `.example`, `.sample` or `.template` skipped the content check, not only the file-name check, so a real key pasted into `.env.example` was committed; the gate's own exemption matched `.githooks/secret_gate.py` in any subfolder; a renamed file was never checked; a file that is not UTF-8 text was skipped; and if git itself failed, the gate saw no files and let the commit through. Now template names skip only the name check, only the gate at the repo root is exempt, renames and type changes are checked under their new name, non-UTF-8 text is decoded and checked, and any git error refuses the commit. Found by an automated security review of a fresh kickoff. Tested by `test_secret_gate.py` (23 checks, was 17; the 6 new ones failed before the fix).
+- Repositories that already have the gate get the fix by running `install_secret_gate.py <repo>` again and committing `.githooks/`. This repository's own gate is updated the same way.
+
 ## 0.4.0 · 2026-11-10
 - Every project now gets a private companion `<id>-internal` next to it, not only public ones. `scaffold_project.py` makes it with an `ownership/` folder and appends its own registry entry (same `co_author`); it refuses before creating anything if either id is already registered. A project whose id ends in `-internal` is itself a companion and gets none. New option `--internal-only` adds just the companion to a project that is already registered. Private records such as the owner's own answers about how the project works go there and never into the project, which may be public or become public later. Tested by `test_scaffold_project.py` (40 checks, was 23).
 - New audit check **CMP** (medium): a repository without its companion folder. Tested by `test_audit_repo.py` (25 checks).
